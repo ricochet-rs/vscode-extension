@@ -1,0 +1,51 @@
+when:
+  - event: pull_request
+  - event: push
+    branch:
+      - ${CI_REPO_DEFAULT_BRANCH}
+
+labels:
+  agent: thumper
+
+steps:
+  install:
+    image: reg.ricochet.rs/docker.io/oven/bun:1.4
+    commands:
+      - bun install --frozen-lockfile
+
+  format:
+    image: reg.ricochet.rs/docker.io/oven/bun:1.4
+    depends_on:
+      - install
+    commands:
+      - bun run format:check
+
+  typecheck:
+    image: reg.ricochet.rs/docker.io/oven/bun:1.4
+    depends_on:
+      - install
+    commands:
+      - bun run typecheck
+
+  lint:
+    image: reg.ricochet.rs/docker.io/oven/bun:1.4
+    depends_on:
+      - install
+    commands:
+      - bun run lint
+
+  test:
+    image: reg.ricochet.rs/docker.io/oven/bun:1.4
+    depends_on:
+      - install
+    commands:
+      - bun run test
+
+  package:
+    image: reg.ricochet.rs/docker.io/oven/bun:1.4
+    depends_on:
+      - install
+    commands:
+      - bun run build
+      # Proves the manifest and .vscodeignore still produce a valid VSIX.
+      - bun run package

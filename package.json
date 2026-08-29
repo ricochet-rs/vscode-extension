@@ -1,0 +1,260 @@
+{
+  "name": "ricochet",
+  "displayName": "Ricochet",
+  "description": "Deploy and manage Ricochet content from VS Code and Positron.",
+  "version": "0.1.0",
+  "publisher": "ricochet-rs",
+  "license": "MIT",
+  "icon": "media/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ricochet-rs/vscode-extension.git"
+  },
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "ricochet",
+    "deploy",
+    "r",
+    "python",
+    "quarto",
+    "shiny",
+    "positron"
+  ],
+  "activationEvents": [
+    "workspaceContains:**/_ricochet.toml"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "ricochet",
+          "title": "Ricochet",
+          "icon": "media/activity-bar.svg"
+        }
+      ]
+    },
+    "views": {
+      "ricochet": [
+        {
+          "id": "ricochet.project",
+          "name": "Project",
+          "icon": "media/activity-bar.svg"
+        },
+        {
+          "id": "ricochet.deployments",
+          "name": "Deployments",
+          "icon": "media/activity-bar.svg"
+        },
+        {
+          "id": "ricochet.servers",
+          "name": "Servers",
+          "icon": "media/activity-bar.svg"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "ricochet.project",
+        "contents": "No _ricochet.toml found in this workspace.\n\nA Ricochet project is a directory holding a _ricochet.toml beside its lockfile.\n[Create _ricochet.toml](command:ricochet.createConfig)\n[Read the documentation](https://docs.ricochet.rs)",
+        "when": "!ricochet.hasProject"
+      },
+      {
+        "view": "ricochet.servers",
+        "contents": "No Ricochet servers are configured.\n[Add a server](command:ricochet.addServer)"
+      }
+    ],
+    "commands": [
+      {
+        "command": "ricochet.deploy",
+        "title": "Deploy",
+        "category": "Ricochet",
+        "icon": "$(cloud-upload)"
+      },
+      {
+        "command": "ricochet.invokeTask",
+        "title": "Run Task Now",
+        "category": "Ricochet",
+        "icon": "$(play)"
+      },
+      {
+        "command": "ricochet.openInBrowser",
+        "title": "Open Deployed Item in Browser",
+        "category": "Ricochet",
+        "icon": "$(link-external)"
+      },
+      {
+        "command": "ricochet.openConfig",
+        "title": "Open _ricochet.toml",
+        "category": "Ricochet",
+        "icon": "$(go-to-file)"
+      },
+      {
+        "command": "ricochet.createConfig",
+        "title": "Create _ricochet.toml",
+        "category": "Ricochet"
+      },
+      {
+        "command": "ricochet.selectProject",
+        "title": "Select Active Project",
+        "category": "Ricochet"
+      },
+      {
+        "command": "ricochet.refresh",
+        "title": "Refresh",
+        "category": "Ricochet",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "ricochet.addServer",
+        "title": "Add Server",
+        "category": "Ricochet",
+        "icon": "$(add)"
+      },
+      {
+        "command": "ricochet.login",
+        "title": "Sign In to Server",
+        "category": "Ricochet",
+        "icon": "$(key)"
+      },
+      {
+        "command": "ricochet.setDefaultServer",
+        "title": "Set as Default Server",
+        "category": "Ricochet"
+      },
+      {
+        "command": "ricochet.showLog",
+        "title": "Show Log",
+        "category": "Ricochet",
+        "icon": "$(output)"
+      },
+      {
+        "command": "ricochet.openDeployment",
+        "title": "Open Deployment in Browser",
+        "category": "Ricochet",
+        "icon": "$(link-external)"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "ricochet.setDefaultServer",
+          "when": "false"
+        },
+        {
+          "command": "ricochet.openDeployment",
+          "when": "false"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "ricochet.deploy",
+          "when": "view == ricochet.project",
+          "group": "navigation@1"
+        },
+        {
+          "command": "ricochet.refresh",
+          "when": "view == ricochet.project",
+          "group": "navigation@2"
+        },
+        {
+          "command": "ricochet.refresh",
+          "when": "view == ricochet.deployments",
+          "group": "navigation@1"
+        },
+        {
+          "command": "ricochet.addServer",
+          "when": "view == ricochet.servers",
+          "group": "navigation@1"
+        },
+        {
+          "command": "ricochet.refresh",
+          "when": "view == ricochet.servers",
+          "group": "navigation@2"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "ricochet.login",
+          "when": "view == ricochet.servers && viewItem == ricochet.server",
+          "group": "inline"
+        },
+        {
+          "command": "ricochet.setDefaultServer",
+          "when": "view == ricochet.servers && viewItem == ricochet.server"
+        },
+        {
+          "command": "ricochet.openDeployment",
+          "when": "view == ricochet.deployments && viewItem == ricochet.deployment",
+          "group": "inline"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "ricochet.deploy",
+          "when": "resourceFilename == _ricochet.toml",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Ricochet",
+      "properties": {
+        "ricochet.cli.path": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Absolute path to the `ricochet` executable. Leave empty to search `PATH` and the default install locations.",
+          "scope": "machine-overridable"
+        },
+        "ricochet.server": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Server profile name or URL to target, passed as `--server`. Leave empty to use the CLI's default server.",
+          "scope": "resource"
+        },
+        "ricochet.deploy.confirm": {
+          "type": "boolean",
+          "default": true,
+          "description": "Ask for confirmation before deploying."
+        },
+        "ricochet.validation.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Report _ricochet.toml problems as editor diagnostics."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "bun run esbuild.mjs",
+    "watch": "bun run esbuild.mjs --watch",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "package": "bunx @vscode/vsce package --no-dependencies",
+    "vscode:prepublish": "bun run build"
+  },
+  "dependencies": {
+    "toml-eslint-parser": "^0.10.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/vscode": "^1.90.0",
+    "@typescript-eslint/eslint-plugin": "^8.18.0",
+    "@typescript-eslint/parser": "^8.18.0",
+    "@vscode/vsce": "^3.2.0",
+    "esbuild": "^0.24.0",
+    "eslint": "^9.17.0",
+    "prettier": "^3.4.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0"
+  }
+}

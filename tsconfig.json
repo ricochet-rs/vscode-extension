@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "Node16",
+    "moduleResolution": "Node16",
+    "lib": ["ES2022"],
+    "outDir": "out",
+    "rootDir": ".",
+    "strict": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "exactOptionalPropertyTypes": true,
+    "noUncheckedIndexedAccess": true,
+    "verbatimModuleSyntax": false,
+    "skipLibCheck": true,
+    "sourceMap": true,
+    "noEmit": true
+  },
+  "include": ["src/**/*.ts", "esbuild.mjs", "vitest.config.mts"]
+}

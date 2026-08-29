@@ -1,0 +1,17 @@
+# Publishing is manual for now: Open VSX is the marketplace Positron reads, and it
+# needs a namespace token that is not yet provisioned. Until then this pipeline only
+# builds and attaches the VSIX to the tag.
+when:
+  - event: tag
+    ref: refs/tags/v*
+
+labels:
+  agent: thumper
+
+steps:
+  package:
+    image: reg.ricochet.rs/docker.io/oven/bun:1.4
+    commands:
+      - bun install --frozen-lockfile
+      - bun run build
+      - bun run package
