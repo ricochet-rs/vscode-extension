@@ -74,7 +74,7 @@ async function invokeTask(workspace: Workspace): Promise<void> {
   }
 
   const client = RicochetClient.create(clientOptions(project.uri));
-  const invocation = await vscode.window.withProgress(
+  await vscode.window.withProgress(
     { location: vscode.ProgressLocation.Notification, title: "Starting task" },
     () => client.invoke(project.config.id as string, { cwd: project.directory }),
   );
@@ -85,7 +85,7 @@ async function invokeTask(workspace: Workspace): Promise<void> {
   const url = serverUrl(project.uri);
   const openable = url !== undefined ? ["Open in Browser"] : [];
   const action = await vscode.window.showInformationMessage(
-    `Task started${invocation.status === undefined ? "" : ` (${invocation.status})`}. Follow it in the web UI.`,
+    "Task started. Follow it in the web UI.",
     ...openable,
   );
   if (action === "Open in Browser" && url !== undefined) {
@@ -258,7 +258,12 @@ async function guard(action: () => Promise<void>): Promise<void> {
       }
       return;
     }
-    const message = error instanceof CliError ? error.summary : String(error);
+    const message =
+      error instanceof CliError
+        ? error.summary
+        : error instanceof Error
+          ? error.message
+          : String(error);
     log().error(message);
     const choice = await vscode.window.showErrorMessage(message, "Show Log");
     if (choice === "Show Log") {

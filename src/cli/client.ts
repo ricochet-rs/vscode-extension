@@ -5,9 +5,8 @@
  * never in argv, so a CLI flag change is a one-file edit.
  */
 
-import { locate } from "./binary.js";
-import { CliError, runOrThrow, type RunOptions } from "./exec.js";
-import { parseJsonOutput } from "./output.js";
+import { ensureSupported, locate } from "./binary.js";
+import { CliError, runOrThrow, type RunOptions, type RunResult } from "./exec.js";
 
 export interface Server {
   readonly name: string;
@@ -18,14 +17,13 @@ export interface Server {
 
 export interface Deployment {
   readonly id: string;
+  /** `pending`, `success`, `dependency_mismatch`, `failure`, `timeout`, `cancelled` or `invalidated`. */
   readonly status: string;
-  readonly createdAt: string | undefined;
-  readonly bundleId: string | undefined;
+  readonly deployedAt: Date | undefined;
 }
 
 export interface Invocation {
   readonly id: string | undefined;
-  readonly status: string | undefined;
 }
 
 export interface ClientOptions {
@@ -58,12 +56,13 @@ export class RicochetClient {
       if (name === undefined || url === undefined) {
         return [];
       }
+      // `api_key` is the masked key, or null when none is stored.
       return [
         {
           name,
           url,
-          isDefault: bool(raw, "default") ?? bool(raw, "is_default") ?? false,
-          hasKey: bool(raw, "has_key") ?? bool(raw, "authenticated") ?? false,
+          isDefault: raw["default"] === true,
+          hasKey: str(raw, "api_key") !== undefined,
         },
       ];
     });
@@ -73,16 +72,17 @@ export class RicochetClient {
   async deployments(kind: ItemKind, id: string, options: RunOptions = {}): Promise<Deployment[]> {
     const payload = await this.json([kind, "deployment", "list", id, "--fields", "all"], options);
     return asArray(payload).flatMap((raw) => {
-      const deploymentId = str(raw, "id") ?? str(raw, "deployment_id");
+      const deploymentId = str(raw, "id");
       if (deploymentId === undefined) {
         return [];
       }
+      const deployedAt = raw["deployed_at"];
       return [
         {
           id: deploymentId,
           status: str(raw, "status") ?? "unknown",
-          createdAt: str(raw, "created_at") ?? str(raw, "createdAt"),
-          bundleId: str(raw, "bundle_id") ?? str(raw, "bundleId"),
+          // Unix seconds.
+          deployedAt: typeof deployedAt === "number" ? new Date(deployedAt * 1000) : undefined,
         },
       ];
     });
@@ -90,54 +90,43 @@ export class RicochetClient {
 
   async invoke(id: string, options: RunOptions = {}): Promise<Invocation> {
     const payload = await this.json(["task", "invoke", id], options);
-    return {
-      id: str(payload, "invocation_id") ?? str(payload, "id"),
-      status: str(payload, "status"),
-    };
+    return { id: str(payload, "id") };
   }
 
   /**
    * Deploys the directory holding `_ricochet.toml`.
-   *
-   * `deploy` does not honour `-F json` yet (ricochet-rs/cli#212), so the response is
-   * whatever the command printed. Progress is surfaced through `onStdout` instead.
+   * The CLI's status lines arrive through `onStderr`, the only progress it reports.
    */
-  async deploy(directory: string, options: RunOptions = {}): Promise<string> {
-    const result = await runOrThrow(this.binary, this.args(["deploy", directory]), {
-      ...options,
-      cwd: directory,
-    });
-    return result.stdout;
+  async deploy(directory: string, options: RunOptions = {}): Promise<void> {
+    await this.run(this.args(["deploy", directory]), { ...options, cwd: directory });
   }
 
   /** Signs in with a pre-existing key, the only non-interactive login path. */
   async loginWithKey(server: string, key: string, options: RunOptions = {}): Promise<void> {
-    await runOrThrow(this.binary, ["login", "--server", server, "-k", key], options);
+    await this.run(["login", "--server", server, "-k", key], options);
   }
 
   async addServer(name: string, url: string, options: RunOptions = {}): Promise<void> {
-    await runOrThrow(this.binary, ["server", "add", name, url], options);
+    await this.run(["server", "add", name, url], options);
   }
 
   async setDefaultServer(name: string, options: RunOptions = {}): Promise<void> {
-    await runOrThrow(this.binary, ["server", "set-default", name], options);
+    await this.run(["server", "set-default", name], options);
   }
 
-  /** Runs a command under `-F json` and returns the recovered payload. */
+  /** Runs a command under `-F json` and parses stdout, which carries the payload alone. */
   private async json(args: readonly string[], options: RunOptions): Promise<unknown> {
-    const result = await runOrThrow(this.binary, this.args(args), options);
+    const result = await this.run(this.args(args), options);
     try {
-      return parseJsonOutput(result.stdout);
-    } catch (error) {
-      // An empty list is a legitimate result that some commands render as prose.
-      if (looksEmpty(result.stdout)) {
-        return [];
-      }
-      throw new CliError(
-        error instanceof Error ? error.message : "Could not read the command output.",
-        result,
-      );
+      return JSON.parse(result.stdout) as unknown;
+    } catch {
+      throw new CliError(`\`ricochet ${args.join(" ")}\` did not print JSON.`, result);
     }
+  }
+
+  private async run(args: readonly string[], options: RunOptions): Promise<RunResult> {
+    await ensureSupported(this.binary);
+    return runOrThrow(this.binary, args, options);
   }
 
   private args(args: readonly string[]): string[] {
@@ -151,20 +140,8 @@ export class RicochetClient {
 
 export type ItemKind = "app" | "task";
 
-function looksEmpty(stdout: string): boolean {
-  return /\b(no |none|empty)\b/i.test(stdout);
-}
-
 function asArray(payload: unknown): Record<string, unknown>[] {
-  const candidate = Array.isArray(payload)
-    ? payload
-    : isRecord(payload)
-      ? (payload["items"] ?? payload["data"] ?? payload["servers"])
-      : undefined;
-  if (!Array.isArray(candidate)) {
-    return [];
-  }
-  return candidate.filter(isRecord);
+  return Array.isArray(payload) ? payload.filter(isRecord) : [];
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -177,12 +154,4 @@ function str(payload: unknown, key: string): string | undefined {
   }
   const value = payload[key];
   return typeof value === "string" ? value : undefined;
-}
-
-function bool(payload: unknown, key: string): boolean | undefined {
-  if (!isRecord(payload)) {
-    return undefined;
-  }
-  const value = payload[key];
-  return typeof value === "boolean" ? value : undefined;
 }

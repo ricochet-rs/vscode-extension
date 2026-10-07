@@ -22,7 +22,7 @@ The layering exists so that the logic worth testing never imports `vscode`.
 | Directory                                                         | Imports `vscode` | Responsibility                            |
 | ----------------------------------------------------------------- | ---------------- | ----------------------------------------- |
 | `src/toml/schema.ts`, `validate.ts`, `document.ts`                | no               | The `_ricochet.toml` schema and its rules |
-| `src/cli/output.ts`, `exec.ts`, `binary.ts`, `client.ts`          | no               | Locating, running and parsing the CLI     |
+| `src/cli/exec.ts`, `binary.ts`, `client.ts`                       | no               | Locating, running and parsing the CLI     |
 | `src/project/config.ts`, `template.ts`                            | no               | Deriving item facts from a parsed config  |
 | `src/toml/diagnostics.ts`, `completion.ts`                        | yes              | Editor bindings for the rules above       |
 | `src/project/workspace.ts`, `src/views`, `src/commands`, `src/ui` | yes              | Everything user-facing                    |
@@ -30,12 +30,12 @@ The layering exists so that the logic worth testing never imports `vscode`.
 Keep that split.
 A rule that moves into a file importing `vscode` stops being testable under Vitest and needs a whole extension host instead.
 
-## The CLI is not yet machine-readable
+## Reading the CLI
 
-`src/cli/output.ts` is an anti-corruption layer, not a convenience.
-Today `-F json` interleaves status lines with the payload, and `deploy` ignores the flag entirely.
-Every workaround for that lives in that one file so it can be deleted when [ricochet-rs/cli#212](https://github.com/ricochet-rs/cli/issues/212) lands.
-Do not scatter output parsing into commands or views.
+Under `-F json`, stdout carries the payload alone and status lines and errors go to stderr, so parse stdout with `JSON.parse` and never scrape prose.
+Read field names from the CLI's `-F json` output, not from the table it prints for people, since the two name things differently.
+`MINIMUM_VERSION` in `src/cli/binary.ts` is enforced before every command, so raise it in the same change that starts relying on a newer CLI feature.
+An untagged CLI build reports the last tagged version with a hash suffix, which sorts below that version, so test against a release binary.
 
 ## Keeping the schema honest
 

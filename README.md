@@ -23,11 +23,13 @@ The Servers view lists the profiles from the CLI's own configuration, shows whic
 
 ## Requirements
 
-The `ricochet` CLI must be installed and on your `PATH`.
+The `ricochet` CLI, version 1.3.0 or newer, must be installed and on your `PATH`.
 
 ```sh
-curl -fsSL https://ricochet.rs/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/ricochet-rs/cli/main/install.sh | sh
 ```
+
+Run `ricochet self update` to upgrade an older CLI.
 
 Set `ricochet.cli.path` if it lives somewhere the extension does not look.
 
@@ -61,7 +63,7 @@ All commands are under the **Ricochet** category.
 
 These follow from gaps in the CLI, tracked in [ricochet-rs/cli#212](https://github.com/ricochet-rs/cli/issues/212).
 
-- Deploy progress is the CLI's own status lines rather than structured events, because `deploy` does not honour `-F json` yet.
+- Deploy progress is the CLI's own status lines rather than structured events, because the CLI does not report deploy progress as events yet.
 - Running a task reports that the run started and points at the web UI, because no CLI command polls an invocation to completion.
 - There is no file inclusion view, because nothing reports what a bundle would contain without deploying it.
 - Signing in is by pasting an API key. The CLI's browser flow binds a `localhost` callback, which is the wrong machine in a remote window.

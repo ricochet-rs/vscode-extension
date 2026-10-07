@@ -55,7 +55,7 @@ export async function deploy(workspace: Workspace): Promise<void> {
         const client = RicochetClient.create(clientOptions(project.uri));
         await client.deploy(project.directory, {
           signal: controller.signal,
-          onStdout: (chunk) => {
+          onStderr: (chunk) => {
             for (const line of chunk.split("\n").map((l) => l.trim())) {
               if (line.length > 0) {
                 log().info(line);
@@ -63,7 +63,6 @@ export async function deploy(workspace: Workspace): Promise<void> {
               }
             }
           },
-          onStderr: (chunk) => log().warn(chunk.trimEnd()),
         });
         await onSuccess(workspace, project);
       } catch (error) {
@@ -140,7 +139,12 @@ function reportFailure(error: unknown): void {
       );
     return;
   }
-  const message = error instanceof CliError ? error.summary : String(error);
+  const message =
+    error instanceof CliError
+      ? error.summary
+      : error instanceof Error
+        ? error.message
+        : String(error);
   log().error(message);
   void vscode.window
     .showErrorMessage(`Deploy failed: ${message}`, "Show Log")

@@ -6,7 +6,8 @@
  */
 
 import { spawn } from "node:child_process";
-import { humanLines, stripAnsi } from "./output.js";
+
+const ANSI = /\u001b\[[0-9;]*[A-Za-z]/g;
 
 export interface RunOptions {
   readonly cwd?: string;
@@ -33,16 +34,16 @@ export class CliError extends Error {
   }
 
   /**
-   * The most useful line to put in a notification. The CLI writes its diagnosis to
-   * stderr as `Error: ...` followed by a `Hint:` block, so prefer that over the exit code.
+   * The most useful line to put in a notification. Status lines and the CLI's `Error: ...`
+   * diagnosis both go to stderr, so prefer the error line over whatever was printed before it.
    */
   get summary(): string {
-    const stderr = stripAnsi(this.result.stderr).trim();
-    const firstError = stderr
+    const lines = this.result.stderr
+      .replace(ANSI, "")
       .split("\n")
       .map((line) => line.trim())
-      .find((line) => line.length > 0);
-    return firstError ?? humanLines(this.result.stdout).pop() ?? this.message;
+      .filter((line) => line.length > 0);
+    return lines.find((line) => line.startsWith("Error:")) ?? lines.at(-1) ?? this.message;
   }
 }
 
@@ -59,6 +60,9 @@ export async function run(
   args: readonly string[],
   options: RunOptions = {},
 ): Promise<RunResult> {
+  if (options.signal?.aborted === true) {
+    throw new CancelledError();
+  }
   return new Promise<RunResult>((resolve, reject) => {
     const child = spawn(binary, [...args], {
       cwd: options.cwd,
