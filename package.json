@@ -47,6 +47,11 @@
           "icon": "media/activity-bar.svg"
         },
         {
+          "id": "ricochet.bundle",
+          "name": "Bundle",
+          "icon": "media/activity-bar.svg"
+        },
+        {
           "id": "ricochet.deployments",
           "name": "Deployments",
           "icon": "media/activity-bar.svg"
@@ -161,6 +166,11 @@
           "command": "ricochet.refresh",
           "when": "view == ricochet.project",
           "group": "navigation@2"
+        },
+        {
+          "command": "ricochet.refresh",
+          "when": "view == ricochet.bundle",
+          "group": "navigation@1"
         },
         {
           "command": "ricochet.refresh",
