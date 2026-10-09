@@ -220,6 +220,9 @@ export const FIELD_DOCS: Readonly<Record<string, FieldDoc>> = {
   "schedule.parameterized": { detail: "Whether the task accepts parameters at invocation." },
   "schedule.on_success": { detail: "Notification targets for a successful run." },
   "schedule.on_error": { detail: "Notification targets for a failed run." },
+  "schedule.max_duration": {
+    detail: "Seconds an invocation may run before it is stopped. Defaults to the server limit.",
+  },
   "static.index": { detail: "File served at the item root, conventionally `index.html`." },
   "static.output_dir": { detail: "Directory holding the rendered output." },
   "static.render_fn": { detail: "Custom render function." },
