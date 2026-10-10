@@ -239,8 +239,7 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "package": "bunx @vscode/vsce package --no-dependencies",
-    "vscode:prepublish": "bun run build"
+    "package": "bun run build && bunx @vscode/vsce package --no-dependencies"
   },
   "dependencies": {
     "toml-eslint-parser": "^0.10.0"

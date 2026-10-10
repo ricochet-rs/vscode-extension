@@ -1,6 +1,6 @@
 /**
- * `RicochetClient` against a stub binary that reproduces the real CLI's output shape,
- * including the human status lines it prints around a `-F json` payload.
+ * `RicochetClient` against a stub binary that reproduces the real CLI's output shape:
+ * the `-F json` payload alone on stdout, and status lines and errors on stderr.
  *
  * This is the layer most likely to break when the CLI changes, and the only one where
  * the parsing, the process handling and the argument construction meet.
@@ -10,18 +10,26 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { chmodSync, mkdtempSync, rmSync, writeFileSync, readFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { CliTooOldError, MINIMUM_VERSION } from "./binary.js";
 import { RicochetClient } from "./client.js";
 import { CliError } from "./exec.js";
 
 let dir: string;
 let binary: string;
+let stubs = 0;
 
-/** Writes a stub that records its argv and prints `stdout`, then exits with `code`. */
-function stub(stdout: string, code = 0, stderr = ""): void {
+/**
+ * Writes a stub that reports `version`, records its argv and prints `stdout`, then exits with `code`.
+ * Each test gets a fresh binary path, because the client remembers which binaries passed the version check.
+ */
+function stub(stdout: string, code = 0, stderr = "", version = MINIMUM_VERSION): void {
+  binary = join(dir, `ricochet-${(stubs += 1)}`);
+  rmSync(join(dir, "argv"), { force: true });
   writeFileSync(
     binary,
     [
       "#!/bin/sh",
+      `if [ "$1" = "--version" ]; then echo "${version}"; exit 0; fi`,
       `printf '%s\\n' "$@" > "${join(dir, "argv")}"`,
       stderr.length > 0 ? `cat >&2 <<'STDERR'\n${stderr}\nSTDERR` : "",
       `cat <<'STDOUT'\n${stdout}\nSTDOUT`,
@@ -40,7 +48,6 @@ function argv(): string[] {
 
 beforeAll(() => {
   dir = mkdtempSync(join(tmpdir(), "ricochet-ext-"));
-  binary = join(dir, "ricochet");
 });
 
 afterAll(() => {
@@ -60,52 +67,50 @@ describe("RicochetClient", () => {
     expect(argv()).toEqual(["-F", "json", "server", "list"]);
   });
 
-  it("reads server profiles past the status lines the CLI prints", async () => {
+  it("reads server profiles as `server list -F json` prints them", async () => {
     stub(
-      [
-        "Configured servers:",
-        JSON.stringify([
-          { name: "production", url: "https://r.example.com", default: true, has_key: true },
-          { name: "staging", url: "https://staging.example.com" },
-        ]),
-      ].join("\n"),
+      JSON.stringify([
+        {
+          name: "production",
+          url: "https://r.example.com/",
+          api_key: "rico_abc...mnop",
+          default: true,
+        },
+        { name: "staging", url: "https://staging.example.com/", api_key: null, default: false },
+      ]),
     );
     const servers = await RicochetClient.create({ binaryPath: binary }).servers();
     expect(servers).toEqual([
-      { name: "production", url: "https://r.example.com", isDefault: true, hasKey: true },
-      { name: "staging", url: "https://staging.example.com", isDefault: false, hasKey: false },
+      { name: "production", url: "https://r.example.com/", isDefault: true, hasKey: true },
+      { name: "staging", url: "https://staging.example.com/", isDefault: false, hasKey: false },
     ]);
   });
 
-  it("reads a payload wrapped in an object rather than a bare array", async () => {
-    stub(JSON.stringify({ items: [{ name: "prod", url: "https://r.example.com" }] }));
-    const servers = await RicochetClient.create({ binaryPath: binary }).servers();
-    expect(servers.map((s) => s.name)).toEqual(["prod"]);
-  });
-
-  it("treats prose about an empty list as an empty list", async () => {
-    stub("No servers configured.");
+  it("reads an empty server list", async () => {
+    stub("[]");
     await expect(RicochetClient.create({ binaryPath: binary }).servers()).resolves.toEqual([]);
   });
 
-  it("reads an invocation from the output `task invoke` actually produces", async () => {
+  it("rejects stdout that is not JSON rather than guessing at it", async () => {
+    stub("No servers configured.");
+    await expect(RicochetClient.create({ binaryPath: binary }).servers()).rejects.toThrow(CliError);
+  });
+
+  it("reads an invocation, with the status lines on stderr", async () => {
     stub(
-      [
-        "Invoking task: 01JTASK",
-        "\u001b[32m✓\u001b[0m Task invoked successfully!",
-        "",
-        JSON.stringify({ invocation_id: "01JINV", content_id: "01JTASK", status: "pending" }),
-      ].join("\n"),
+      JSON.stringify({ id: "01JINV", content_id: "01JTASK" }),
+      0,
+      "Invoking task: 01JTASK\n\u001b[32m✓\u001b[0m Task invoked successfully!",
     );
     const invocation = await RicochetClient.create({ binaryPath: binary }).invoke("01JTASK");
-    expect(invocation).toEqual({ id: "01JINV", status: "pending" });
+    expect(invocation).toEqual({ id: "01JINV" });
     expect(argv()).toEqual(["-F", "json", "task", "invoke", "01JTASK"]);
   });
 
   it("asks for every deployment field and drops entries with no id", async () => {
     stub(
       JSON.stringify([
-        { id: "01JDEP", status: "success", created_at: "2026-01-01T00:00:00Z" },
+        { id: "01JDEP", content_id: "01JAPP", deployed_at: 1767225600, status: "success" },
         { status: "success" },
       ]),
     );
@@ -114,7 +119,7 @@ describe("RicochetClient", () => {
       "01JAPP",
     );
     expect(deployments).toEqual([
-      { id: "01JDEP", status: "success", createdAt: "2026-01-01T00:00:00Z", bundleId: undefined },
+      { id: "01JDEP", status: "success", deployedAt: new Date("2026-01-01T00:00:00Z") },
     ]);
     expect(argv()).toEqual([
       "-F",
@@ -128,8 +133,12 @@ describe("RicochetClient", () => {
     ]);
   });
 
-  it("surfaces the CLI's own error line rather than the exit code", async () => {
-    stub("", 1, "Error: Credentials are invalid or expired for server https://r.example.com");
+  it("surfaces the CLI's own error line rather than the status lines before it", async () => {
+    stub(
+      "",
+      1,
+      "Invoking task: 01JTASK\nError: Credentials are invalid or expired for server https://r.example.com",
+    );
     const client = RicochetClient.create({ binaryPath: binary });
     await expect(client.servers()).rejects.toThrow(CliError);
     await client.servers().catch((error: unknown) => {
@@ -139,26 +148,46 @@ describe("RicochetClient", () => {
     });
   });
 
-  it("returns deploy output verbatim, since deploy has no JSON mode yet", async () => {
+  it("deploys under -F json and streams the status lines from stderr", async () => {
     stub(
-      "✓ Deployment successful!\n\nLinks:\n  App Overview: https://r.example.com/apps/01J/overview",
+      JSON.stringify({ id: "01J", deployment_id: "01JDEP" }),
+      0,
+      "local-app (new app)\n  Path: /tmp/app",
     );
-    const output = await RicochetClient.create({ binaryPath: binary }).deploy(dir);
-    expect(output).toContain("Deployment successful!");
+    const lines: string[] = [];
+    await RicochetClient.create({ binaryPath: binary }).deploy(dir, {
+      onStderr: (chunk) => lines.push(chunk),
+    });
+    expect(lines.join("")).toContain("local-app (new app)");
     expect(argv()).toEqual(["-F", "json", "deploy", dir]);
   });
 
-  it("streams stdout to the caller as it arrives", async () => {
-    stub("line one\nline two");
-    const chunks: string[] = [];
-    await RicochetClient.create({ binaryPath: binary }).deploy(dir, {
-      onStdout: (chunk) => chunks.push(chunk),
-    });
-    expect(chunks.join("")).toContain("line two");
+  it("refuses a CLI older than the minimum without running the command", async () => {
+    stub("[]", 0, "", "1.2.0");
+    const client = RicochetClient.create({ binaryPath: binary });
+    await expect(client.servers()).rejects.toThrow(CliTooOldError);
+    expect(argv()).toEqual([]);
+  });
+
+  it("checks the version again after a failed check, so an upgrade needs no reload", async () => {
+    stub("[]", 0, "", "1.2.0");
+    const client = RicochetClient.create({ binaryPath: binary });
+    await expect(client.servers()).rejects.toThrow(CliTooOldError);
+    writeFileSync(
+      binary,
+      `#!/bin/sh\nif [ "$1" = "--version" ]; then echo "${MINIMUM_VERSION}"; exit 0; fi\necho "[]"\n`,
+      "utf8",
+    );
+    await expect(client.servers()).resolves.toEqual([]);
   });
 
   it("aborts the process when the signal fires", async () => {
-    writeFileSync(binary, "#!/bin/sh\nsleep 30\n", "utf8");
+    stub("[]");
+    writeFileSync(
+      binary,
+      `#!/bin/sh\nif [ "$1" = "--version" ]; then echo "${MINIMUM_VERSION}"; exit 0; fi\nsleep 30\n`,
+      "utf8",
+    );
     chmodSync(binary, 0o755);
     const controller = new AbortController();
     const pending = RicochetClient.create({ binaryPath: binary }).deploy(dir, {

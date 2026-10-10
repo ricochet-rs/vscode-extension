@@ -10,7 +10,8 @@ import { homedir, platform } from "node:os";
 import { delimiter, join } from "node:path";
 import { run } from "./exec.js";
 
-export const MINIMUM_VERSION = "0.15.0";
+/** The CLI release the extension is built and tested against. Older ones print prose into `-F json` stdout. */
+export const MINIMUM_VERSION = "1.3.0";
 
 const EXECUTABLE = platform() === "win32" ? "ricochet.exe" : "ricochet";
 
@@ -36,6 +37,37 @@ export class CliNotFoundError extends Error {
     );
     this.name = "CliNotFoundError";
   }
+}
+
+export class CliTooOldError extends Error {
+  constructor(readonly found: string | undefined) {
+    super(
+      found === undefined
+        ? `Could not read the version of the \`ricochet\` CLI. This extension needs version ${MINIMUM_VERSION} or newer.`
+        : `The \`ricochet\` CLI is version ${found}, and this extension needs ${MINIMUM_VERSION} or newer. Run \`ricochet self update\` to upgrade.`,
+    );
+    this.name = "CliTooOldError";
+  }
+}
+
+const supported = new Map<string, Promise<void>>();
+
+/**
+ * Throws `CliTooOldError` unless `binary` is at least `MINIMUM_VERSION`.
+ * A passing check is remembered per binary; a failing one is retried, so an upgrade needs no reload.
+ */
+export async function ensureSupported(binary: string): Promise<void> {
+  let check = supported.get(binary);
+  if (check === undefined) {
+    check = version(binary).then((found) => {
+      if (found === undefined || !isAtLeast(found, MINIMUM_VERSION)) {
+        throw new CliTooOldError(found);
+      }
+    });
+    supported.set(binary, check);
+    check.catch(() => supported.delete(binary));
+  }
+  return check;
 }
 
 /**

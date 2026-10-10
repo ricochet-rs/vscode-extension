@@ -16,7 +16,7 @@ import { log } from "../ui/log.js";
 export class DeploymentItem extends vscode.TreeItem {
   constructor(readonly deployment: Deployment) {
     super(shortId(deployment.id), vscode.TreeItemCollapsibleState.None);
-    this.description = [deployment.status, formatDate(deployment.createdAt)]
+    this.description = [deployment.status, formatDate(deployment.deployedAt)]
       .filter(Boolean)
       .join(" · ");
     this.iconPath = new vscode.ThemeIcon(
@@ -101,17 +101,14 @@ function shortId(id: string): string {
 }
 
 function statusIcon(status: string): string {
-  switch (status.toLowerCase()) {
+  switch (status) {
     case "success":
-    case "completed":
-    case "deployed":
       return "pass";
-    case "failed":
-    case "error":
+    case "failure":
+    case "timeout":
+    case "dependency_mismatch":
       return "error";
-    case "running":
     case "pending":
-    case "queued":
       return "sync";
     default:
       return "circle-outline";
@@ -119,23 +116,18 @@ function statusIcon(status: string): string {
 }
 
 function statusColor(status: string): vscode.ThemeColor | undefined {
-  switch (status.toLowerCase()) {
+  switch (status) {
     case "success":
-    case "completed":
-    case "deployed":
       return new vscode.ThemeColor("testing.iconPassed");
-    case "failed":
-    case "error":
+    case "failure":
+    case "timeout":
+    case "dependency_mismatch":
       return new vscode.ThemeColor("testing.iconFailed");
     default:
       return undefined;
   }
 }
 
-function formatDate(value: string | undefined): string {
-  if (value === undefined) {
-    return "";
-  }
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleString();
+function formatDate(value: Date | undefined): string {
+  return value === undefined ? "" : value.toLocaleString();
 }
