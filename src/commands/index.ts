@@ -8,7 +8,8 @@
 import * as vscode from "vscode";
 import { join } from "node:path";
 import { RicochetClient } from "../cli/client.js";
-import { CliError } from "../cli/exec.js";
+import { CancelledError, CliError } from "../cli/exec.js";
+import { describeTaskRun } from "../cli/taskRun.js";
 import { CliNotFoundError } from "../cli/binary.js";
 import { clientOptions } from "../config.js";
 import { deploy } from "./deploy.js";
@@ -73,21 +74,46 @@ async function invokeTask(workspace: Workspace): Promise<void> {
     return;
   }
 
+  const id = project.config.id;
+  const name = project.config.name ?? "Task";
   const client = RicochetClient.create(clientOptions(project.uri));
-  await vscode.window.withProgress(
-    { location: vscode.ProgressLocation.Notification, title: "Starting task" },
-    () => client.invoke(project.config.id as string, { cwd: project.directory }),
+  const run = await vscode.window.withProgress(
+    {
+      location: vscode.ProgressLocation.Notification,
+      title: `Running ${name}`,
+      cancellable: true,
+    },
+    async (_progress, token) => {
+      const controller = new AbortController();
+      token.onCancellationRequested(() => controller.abort());
+      try {
+        return await client.runTask(id, { cwd: project.directory, signal: controller.signal });
+      } catch (error) {
+        if (error instanceof CancelledError) {
+          return undefined;
+        }
+        throw error;
+      }
+    },
   );
+  if (run === undefined) {
+    void vscode.window.showInformationMessage(
+      `Stopped waiting for ${name}. The run continues on the server.`,
+    );
+    return;
+  }
 
-  // `task invoke` returns as soon as the run is created and nothing polls it yet,
-  // so the honest thing is to say the run started and offer the web UI.
-  // See https://github.com/ricochet-rs/cli/issues/212.
+  const outcome = describeTaskRun(name, run);
+  log().info(`Task run ${run.id}: ${run.status}`);
   const url = serverUrl(project.uri);
   const openable = url !== undefined ? ["Open in Browser"] : [];
-  const action = await vscode.window.showInformationMessage(
-    "Task started. Follow it in the web UI.",
-    ...openable,
-  );
+  const show =
+    outcome.level === "error"
+      ? vscode.window.showErrorMessage
+      : outcome.level === "warning"
+        ? vscode.window.showWarningMessage
+        : vscode.window.showInformationMessage;
+  const action = await show(outcome.message, ...openable);
   if (action === "Open in Browser" && url !== undefined) {
     const target = itemUrl(url, project.config);
     if (target !== undefined) {

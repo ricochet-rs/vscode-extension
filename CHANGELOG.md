@@ -6,6 +6,7 @@
 - The Servers view shows which servers have a stored key.
 - The Deployments view shows when each deployment happened, and marks failed, timed-out and dependency-mismatch deployments as failures.
 - Cancelling an operation before the CLI starts no longer leaves the command running.
+- **Run Task Now** waits for the run to finish and reports whether it succeeded, failed or was cancelled, and how long it took. Cancelling stops waiting while the run continues on the server.
 
 ## 0.1.0
 

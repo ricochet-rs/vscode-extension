@@ -96,15 +96,59 @@ describe("RicochetClient", () => {
     await expect(RicochetClient.create({ binaryPath: binary }).servers()).rejects.toThrow(CliError);
   });
 
-  it("reads an invocation, with the status lines on stderr", async () => {
+  it("waits for a task run and reads how it finished", async () => {
     stub(
-      JSON.stringify({ id: "01JINV", content_id: "01JTASK" }),
+      JSON.stringify({
+        id: "01JINV",
+        invoked_at: 1767225600,
+        status: "success",
+        started: 1767225601,
+        ended: 1767225643,
+        deployment_id: "01JDEP",
+        display_name: "Ada",
+        invoked_by: "344509059241640593",
+      }),
       0,
       "Invoking task: 01JTASK\n\u001b[32m✓\u001b[0m Task invoked successfully!",
     );
-    const invocation = await RicochetClient.create({ binaryPath: binary }).invoke("01JTASK");
-    expect(invocation).toEqual({ id: "01JINV" });
-    expect(argv()).toEqual(["-F", "json", "task", "invoke", "01JTASK"]);
+    const run = await RicochetClient.create({ binaryPath: binary }).runTask("01JTASK");
+    expect(run).toEqual({
+      id: "01JINV",
+      status: "success",
+      startedAt: new Date(1767225601_000),
+      endedAt: new Date(1767225643_000),
+    });
+    expect(argv()).toEqual(["-F", "json", "task", "invoke", "01JTASK", "--wait"]);
+  });
+
+  it("resolves a failed run with its status, although the CLI exits non-zero", async () => {
+    stub(
+      JSON.stringify({
+        id: "01JINV",
+        invoked_at: 1,
+        status: "failure",
+        started: 2,
+        ended: 9,
+        invoked_by: "1",
+      }),
+      1,
+      "Error: Task run 01JINV finished as failure",
+    );
+    const run = await RicochetClient.create({ binaryPath: binary }).runTask("01JTASK");
+    expect(run.status).toBe("failure");
+  });
+
+  it("throws when the CLI lost track of the run and printed no result", async () => {
+    stub(
+      "",
+      1,
+      "Error: Lost track of task run 01JINV. Check it later with `ricochet task invocation get 01JTASK 01JINV`",
+    );
+    const pending = RicochetClient.create({ binaryPath: binary }).runTask("01JTASK");
+    await expect(pending).rejects.toThrow(CliError);
+    await pending.catch((error: unknown) => {
+      expect((error as CliError).summary).toContain("Lost track of task run 01JINV");
+    });
   });
 
   it("asks for every deployment field and drops entries with no id", async () => {

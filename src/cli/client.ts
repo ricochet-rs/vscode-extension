@@ -6,7 +6,7 @@
  */
 
 import { ensureSupported, locate } from "./binary.js";
-import { CliError, runOrThrow, type RunOptions, type RunResult } from "./exec.js";
+import { CliError, run, runOrThrow, type RunOptions, type RunResult } from "./exec.js";
 
 export interface Server {
   readonly name: string;
@@ -22,8 +22,12 @@ export interface Deployment {
   readonly deployedAt: Date | undefined;
 }
 
-export interface Invocation {
-  readonly id: string | undefined;
+export interface TaskRun {
+  readonly id: string;
+  /** `success`, `failure` or `cancelled` once finished. */
+  readonly status: string;
+  readonly startedAt: Date | undefined;
+  readonly endedAt: Date | undefined;
 }
 
 export interface ClientOptions {
@@ -76,21 +80,37 @@ export class RicochetClient {
       if (deploymentId === undefined) {
         return [];
       }
-      const deployedAt = raw["deployed_at"];
       return [
         {
           id: deploymentId,
           status: str(raw, "status") ?? "unknown",
-          // Unix seconds.
-          deployedAt: typeof deployedAt === "number" ? new Date(deployedAt * 1000) : undefined,
+          deployedAt: seconds(raw["deployed_at"]),
         },
       ];
     });
   }
 
-  async invoke(id: string, options: RunOptions = {}): Promise<Invocation> {
-    const payload = await this.json(["task", "invoke", id], options);
-    return { id: str(payload, "id") };
+  /**
+   * Starts a deployed task and waits for the run to finish.
+   * A run that fails still resolves with its status; only a run the CLI lost track of throws.
+   */
+  async runTask(id: string, options: RunOptions = {}): Promise<TaskRun> {
+    const args = this.args(["task", "invoke", id, "--wait"]);
+    await ensureSupported(this.binary);
+    // The CLI prints the finished run and then exits non-zero unless it succeeded.
+    const result = await run(this.binary, args, options);
+    const payload = parseJson(result.stdout);
+    const runId = str(payload, "id");
+    const status = str(payload, "status");
+    if (!isRecord(payload) || runId === undefined || status === undefined) {
+      throw new CliError(`\`ricochet ${args.join(" ")}\` exited with ${result.code}.`, result);
+    }
+    return {
+      id: runId,
+      status,
+      startedAt: seconds(payload["started"]),
+      endedAt: seconds(payload["ended"]),
+    };
   }
 
   /**
@@ -139,6 +159,19 @@ export class RicochetClient {
 }
 
 export type ItemKind = "app" | "task";
+
+function parseJson(stdout: string): unknown {
+  try {
+    return JSON.parse(stdout) as unknown;
+  } catch {
+    return undefined;
+  }
+}
+
+/** The CLI reports times as Unix seconds. */
+function seconds(value: unknown): Date | undefined {
+  return typeof value === "number" ? new Date(value * 1000) : undefined;
+}
 
 function asArray(payload: unknown): Record<string, unknown>[] {
   return Array.isArray(payload) ? payload.filter(isRecord) : [];

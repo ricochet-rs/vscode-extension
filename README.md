@@ -51,7 +51,7 @@ All commands are under the **Ricochet** category.
 | Command                                   | Description                                       |
 | ----------------------------------------- | ------------------------------------------------- |
 | `Ricochet: Deploy`                        | Deploy the active project.                        |
-| `Ricochet: Run Task Now`                  | Invoke a deployed task.                           |
+| `Ricochet: Run Task Now`                  | Run a deployed task and report how it finished.   |
 | `Ricochet: Open Deployed Item in Browser` | Open the item in the web UI.                      |
 | `Ricochet: Create _ricochet.toml`         | Write a minimal, valid config to start from.      |
 | `Ricochet: Select Active Project`         | Choose between several projects in one workspace. |
@@ -64,7 +64,6 @@ All commands are under the **Ricochet** category.
 These follow from gaps in the CLI, tracked in [ricochet-rs/cli#212](https://github.com/ricochet-rs/cli/issues/212).
 
 - Deploy progress is the CLI's own status lines rather than structured events, because the CLI does not report deploy progress as events yet.
-- Running a task reports that the run started and points at the web UI, because no CLI command polls an invocation to completion.
 - There is no file inclusion view, because nothing reports what a bundle would contain without deploying it.
 - Signing in is by pasting an API key. The CLI's browser flow binds a `localhost` callback, which is the wrong machine in a remote window.
 
