@@ -1,0 +1,11 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["local>ricochet-rs/renovate-config"],
+  "packageRules": [
+    {
+      "description": "Keep @types/vscode at engines.vscode: vsce refuses to package when the types are newer than the oldest supported VS Code, so both move together by hand",
+      "matchPackageNames": ["@types/vscode"],
+      "enabled": false
+    }
+  ]
+}
