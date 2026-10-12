@@ -15,12 +15,14 @@ import { clientOptions } from "../config.js";
 import { deploy } from "./deploy.js";
 import { deploymentUrl, isDeployed, itemKind, itemUrl } from "../project/config.js";
 import { CONFIG_FILENAME, type Workspace } from "../project/workspace.js";
+import type { BundleView } from "../views/bundleView.js";
 import type { DeploymentItem, DeploymentsView } from "../views/deploymentsView.js";
 import type { ServerItem, ServersView } from "../views/serversView.js";
 import { log } from "../ui/log.js";
 import { TEMPLATE } from "../project/template.js";
 
 export interface Views {
+  readonly bundle: BundleView;
   readonly deployments: DeploymentsView;
   readonly servers: ServersView;
 }
@@ -37,6 +39,7 @@ export function registerCommands(
   register("ricochet.deploy", () => guard(() => deploy(workspace)));
   register("ricochet.refresh", async () => {
     await workspace.refresh();
+    views.bundle.refresh();
     views.deployments.refresh();
     views.servers.refresh();
   });

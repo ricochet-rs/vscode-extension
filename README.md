@@ -15,6 +15,10 @@ Key and value completion covers every table in the schema.
 The Project view shows what the active `_ricochet.toml` describes and whether it has ever been deployed.
 Deploying reports progress in a notification, streams the CLI's output to the Ricochet log, and offers to open the result.
 
+**See what a deploy would send.**
+The Bundle view lists every file a deploy would upload with its size, and groups the files left out by the reason, such as a `content.exclude` pattern or a `.venv` directory, which is never sent.
+It reads the project on your machine, so it works before you sign in.
+
 **See where the item went.**
 The Deployments view lists the item's deployment history with status, and opens any entry in the web UI.
 
@@ -64,7 +68,6 @@ All commands are under the **Ricochet** category.
 These follow from gaps in the CLI, tracked in [ricochet-rs/cli#212](https://github.com/ricochet-rs/cli/issues/212).
 
 - Deploy progress is the CLI's own status lines rather than structured events, because the CLI does not report deploy progress as events yet.
-- There is no file inclusion view, because nothing reports what a bundle would contain without deploying it.
 - Signing in is by pasting an API key. The CLI's browser flow binds a `localhost` callback, which is the wrong machine in a remote window.
 
 ## Development

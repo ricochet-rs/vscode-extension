@@ -30,6 +30,16 @@ export interface TaskRun {
   readonly endedAt: Date | undefined;
 }
 
+export interface BundleFile {
+  /** Path inside the bundle. */
+  readonly path: string;
+  readonly size: number;
+  /** Why the file is left out: `always-excluded`, `not-included` or `exclude:<pattern>`. Absent when included. */
+  readonly reason: string | undefined;
+  /** Where a file from outside the deployed directory, such as a workspace `uv.lock`, is read from. */
+  readonly source: string | undefined;
+}
+
 export interface ClientOptions {
   /** Overrides the located binary, from `ricochet.cli.path`. */
   readonly binaryPath?: string;
@@ -119,6 +129,30 @@ export class RicochetClient {
    */
   async deploy(directory: string, options: RunOptions = {}): Promise<void> {
     await this.run(this.args(["deploy", directory]), { ...options, cwd: directory });
+  }
+
+  /** Lists every file a deploy of `directory` would consider, without contacting a server. */
+  async bundle(directory: string, options: RunOptions = {}): Promise<BundleFile[]> {
+    const payload = await this.json(["deploy", directory, "--dry-run"], {
+      ...options,
+      cwd: directory,
+    });
+    const files = isRecord(payload) ? asArray(payload["files"]) : [];
+    return files.flatMap((raw) => {
+      const path = str(raw, "path");
+      const size = raw["size"];
+      if (path === undefined || typeof size !== "number") {
+        return [];
+      }
+      return [
+        {
+          path,
+          size,
+          reason: raw["included"] === true ? undefined : (str(raw, "reason") ?? "not-included"),
+          source: str(raw, "source"),
+        },
+      ];
+    });
   }
 
   /** Signs in with a pre-existing key, the only non-interactive login path. */

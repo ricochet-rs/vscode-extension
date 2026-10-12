@@ -151,6 +151,27 @@ describe("RicochetClient", () => {
     });
   });
 
+  it("reads a deploy dry run, including files from outside the directory", async () => {
+    stub(
+      JSON.stringify({
+        files: [
+          { path: ".venv/lib/x.py", included: false, size: 2, reason: "always-excluded" },
+          { path: "app.py", included: true, size: 15 },
+          { path: "uv.lock", included: true, size: 40, source: "/work/uv.lock" },
+        ],
+      }),
+      0,
+      "demo (new app)\n  Path: /work/app",
+    );
+    const files = await RicochetClient.create({ binaryPath: binary }).bundle(dir);
+    expect(files).toEqual([
+      { path: ".venv/lib/x.py", size: 2, reason: "always-excluded", source: undefined },
+      { path: "app.py", size: 15, reason: undefined, source: undefined },
+      { path: "uv.lock", size: 40, reason: undefined, source: "/work/uv.lock" },
+    ]);
+    expect(argv()).toEqual(["-F", "json", "deploy", dir, "--dry-run"]);
+  });
+
   it("asks for every deployment field and drops entries with no id", async () => {
     stub(
       JSON.stringify([
