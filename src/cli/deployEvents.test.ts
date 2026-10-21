@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { LineSplitter, parseDeployEvent, uploadPercent } from "./deployEvents.js";
+import { parseDeployEvent, uploadPercent } from "./deployEvents.js";
 
 describe("parseDeployEvent", () => {
   it("reads the events a local deploy writes, in the CLI's field names", () => {
@@ -40,17 +40,5 @@ describe("uploadPercent", () => {
     expect(uploadPercent({ bytesSent: 83887, bytesTotal: 8388608 })).toBe(1);
     expect(uploadPercent({ bytesSent: 8388608, bytesTotal: 8388608 })).toBe(100);
     expect(uploadPercent({ bytesSent: 0, bytesTotal: 0 })).toBe(100);
-  });
-});
-
-describe("LineSplitter", () => {
-  it("joins a line split across chunks and holds back the partial tail", () => {
-    const splitter = new LineSplitter();
-    expect(splitter.push('{"event":"bund')).toEqual([]);
-    expect(splitter.push('ling","files":1}\n{"event":')).toEqual([
-      '{"event":"bundling","files":1}',
-    ]);
-    expect(splitter.flush()).toEqual(['{"event":']);
-    expect(splitter.flush()).toEqual([]);
   });
 });

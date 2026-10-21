@@ -19,13 +19,13 @@ Anything involving the bundle format, the `_ricochet.toml` schema semantics, or 
 
 The layering exists so that the logic worth testing never imports `vscode`.
 
-| Directory                                                                    | Imports `vscode` | Responsibility                                      |
-| ---------------------------------------------------------------------------- | ---------------- | --------------------------------------------------- |
-| `src/toml/schema.ts`, `validate.ts`, `document.ts`                           | no               | The `_ricochet.toml` schema and its rules           |
-| `src/cli/exec.ts`, `binary.ts`, `client.ts`, `taskRun.ts`, `deployEvents.ts` | no               | Locating, running and parsing the CLI               |
-| `src/project/config.ts`, `template.ts`, `bundle.ts`                          | no               | Deriving item facts from a parsed config or dry run |
-| `src/toml/diagnostics.ts`, `completion.ts`                                   | yes              | Editor bindings for the rules above                 |
-| `src/project/workspace.ts`, `src/views`, `src/commands`, `src/ui`            | yes              | Everything user-facing                              |
+| Directory                                                                                | Imports `vscode` | Responsibility                                      |
+| ---------------------------------------------------------------------------------------- | ---------------- | --------------------------------------------------- |
+| `src/toml/schema.ts`, `validate.ts`, `document.ts`                                       | no               | The `_ricochet.toml` schema and its rules           |
+| `src/cli/exec.ts`, `binary.ts`, `client.ts`, `taskRun.ts`, `deployEvents.ts`, `lines.ts` | no               | Locating, running and parsing the CLI               |
+| `src/project/config.ts`, `template.ts`, `bundle.ts`                                      | no               | Deriving item facts from a parsed config or dry run |
+| `src/toml/diagnostics.ts`, `completion.ts`                                               | yes              | Editor bindings for the rules above                 |
+| `src/project/workspace.ts`, `src/views`, `src/commands`, `src/ui`                        | yes              | Everything user-facing                              |
 
 Keep that split.
 A rule that moves into a file importing `vscode` stops being testable under Vitest and needs a whole extension host instead.

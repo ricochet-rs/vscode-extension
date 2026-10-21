@@ -9,11 +9,11 @@ import { ensureSupported, locate } from "./binary.js";
 import { CliError, run, runOrThrow, type RunOptions, type RunResult } from "./exec.js";
 import {
   DeployError,
-  LineSplitter,
   parseDeployEvent,
   type DeployEvent,
   type DeployProgressEvent,
 } from "./deployEvents.js";
+import { LineSplitter } from "./lines.js";
 
 export interface Server {
   readonly name: string;
