@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { deploymentUrl, isDeployed, itemKind, itemUrl, readConfig } from "./config.js";
+import {
+  credentialsUrl,
+  deploymentUrl,
+  isDeployed,
+  itemKind,
+  itemUrl,
+  readConfig,
+} from "./config.js";
 
 const TASK = `
 [content]
@@ -93,5 +100,18 @@ describe("deploymentUrl", () => {
     expect(deploymentUrl("https://r.example.com//", "01JDEP")).toBe(
       "https://r.example.com/deployments/01JDEP",
     );
+  });
+});
+
+describe("credentialsUrl", () => {
+  it("points at the origin's credentials page, whatever path the server url has", () => {
+    expect(credentialsUrl("https://r.example.com/")).toBe("https://r.example.com/credentials");
+    expect(credentialsUrl("https://r.example.com/some/path")).toBe(
+      "https://r.example.com/credentials",
+    );
+  });
+
+  it("returns undefined for a server url it cannot parse", () => {
+    expect(credentialsUrl("not a url")).toBeUndefined();
   });
 });
