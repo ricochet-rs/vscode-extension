@@ -10,6 +10,7 @@
 - Cancelling an operation before the CLI starts no longer leaves the command running.
 - The **Bundle** view lists the files a deploy would send and groups the files left out by the reason.
 - **Run Task Now** waits for the run to finish and reports whether it succeeded, failed or was cancelled, and how long it took. Cancelling stops waiting while the run continues on the server.
+- **Show Output** on a finished task run opens what the run printed in the **Ricochet Task Output** panel.
 
 ## 0.1.0
 

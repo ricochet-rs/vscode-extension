@@ -19,3 +19,18 @@ export function log(): vscode.LogOutputChannel {
   }
   return channel;
 }
+
+/** The output of the last task run the user opened, kept apart from the extension's own log. */
+let taskChannel: vscode.OutputChannel | undefined;
+
+export function createTaskOutput(): vscode.OutputChannel {
+  taskChannel = vscode.window.createOutputChannel("Ricochet Task Output");
+  return taskChannel;
+}
+
+export function taskOutput(): vscode.OutputChannel {
+  if (taskChannel === undefined) {
+    throw new Error("The task output channel was used before activation.");
+  }
+  return taskChannel;
+}

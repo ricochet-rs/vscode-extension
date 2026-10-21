@@ -269,6 +269,45 @@ describe("RicochetClient", () => {
     );
   });
 
+  it("reads a log's records under -F json, skipping lines that are not records", async () => {
+    stub(
+      [
+        '{"line":"rendering","timestamp":"2026-10-21T09:15:02Z","stream":"stdout"}',
+        "not a record",
+        '{"line":"plain","timestamp":null,"stream":null}',
+      ].join("\n"),
+    );
+    const records: unknown[] = [];
+    await RicochetClient.create({ binaryPath: binary }).log("01JRUN", {
+      onRecord: (record) => records.push(record),
+    });
+    expect(records).toEqual([
+      { line: "rendering", timestamp: new Date("2026-10-21T09:15:02Z"), stream: "stdout" },
+      { line: "plain", timestamp: undefined, stream: undefined },
+    ]);
+    expect(argv()).toEqual(["-F", "json", "log", "01JRUN"]);
+  });
+
+  it("reads a record whose line arrives in two chunks", async () => {
+    stub("");
+    writeFileSync(
+      binary,
+      [
+        "#!/bin/sh",
+        `if [ "$1" = "--version" ]; then echo "${MINIMUM_VERSION}"; exit 0; fi`,
+        `printf '{"line":"first ha'`,
+        "sleep 0.2",
+        `printf 'lf","timestamp":null,"stream":null}'`,
+      ].join("\n"),
+      "utf8",
+    );
+    const records: unknown[] = [];
+    await RicochetClient.create({ binaryPath: binary }).log("01JRUN", {
+      onRecord: (record) => records.push(record),
+    });
+    expect(records).toEqual([{ line: "first half", timestamp: undefined, stream: undefined }]);
+  });
+
   it("refuses a CLI older than the minimum without running the command", async () => {
     stub("[]", 0, "", "1.2.0");
     const client = RicochetClient.create({ binaryPath: binary });

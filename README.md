@@ -20,6 +20,10 @@ When a deploy fails because your key is missing or expired, the error offers **S
 The Bundle view lists every file a deploy would upload with its size, and groups the files left out by the reason, such as a `content.exclude` pattern or a `.venv` directory, which is never sent.
 It reads the project on your machine, so it works before you sign in.
 
+**Run a task and read its output.**
+**Run Task Now** waits for the run to finish and reports whether it succeeded and how long it took.
+**Show Output** on that notification opens the run's output in the **Ricochet Task Output** panel.
+
 **See where the item went.**
 The Deployments view lists the item's deployment history with status, and opens any entry in the web UI.
 
@@ -53,16 +57,16 @@ Set `ricochet.cli.path` if it lives somewhere the extension does not look.
 
 All commands are under the **Ricochet** category.
 
-| Command                                   | Description                                       |
-| ----------------------------------------- | ------------------------------------------------- |
-| `Ricochet: Deploy`                        | Deploy the active project.                        |
-| `Ricochet: Run Task Now`                  | Run a deployed task and report how it finished.   |
-| `Ricochet: Open Deployed Item in Browser` | Open the item in the web UI.                      |
-| `Ricochet: Create _ricochet.toml`         | Write a minimal, valid config to start from.      |
-| `Ricochet: Select Active Project`         | Choose between several projects in one workspace. |
-| `Ricochet: Add Server`                    | Add a server profile.                             |
-| `Ricochet: Sign In to Server`             | Store an API key for a server.                    |
-| `Ricochet: Show Log`                      | Open the Ricochet log channel.                    |
+| Command                                   | Description                                                       |
+| ----------------------------------------- | ----------------------------------------------------------------- |
+| `Ricochet: Deploy`                        | Deploy the active project.                                        |
+| `Ricochet: Run Task Now`                  | Run a deployed task, report how it finished, and show its output. |
+| `Ricochet: Open Deployed Item in Browser` | Open the item in the web UI.                                      |
+| `Ricochet: Create _ricochet.toml`         | Write a minimal, valid config to start from.                      |
+| `Ricochet: Select Active Project`         | Choose between several projects in one workspace.                 |
+| `Ricochet: Add Server`                    | Add a server profile.                                             |
+| `Ricochet: Sign In to Server`             | Store an API key for a server.                                    |
+| `Ricochet: Show Log`                      | Open the Ricochet log channel.                                    |
 
 ## Known limitations
 
