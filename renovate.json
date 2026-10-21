@@ -6,6 +6,11 @@
       "description": "Keep @types/vscode at engines.vscode: vsce refuses to package when the types are newer than the oldest supported VS Code, so both move together by hand",
       "matchPackageNames": ["@types/vscode"],
       "enabled": false
+    },
+    {
+      "description": "Hold TypeScript below 7: typescript-eslint refuses to load on TS 7 until typescript-eslint/typescript-eslint#10940 lands",
+      "matchPackageNames": ["typescript"],
+      "allowedVersions": "<7"
     }
   ]
 }
