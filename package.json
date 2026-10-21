@@ -252,7 +252,7 @@
     "package": "bun run build && bunx @vscode/vsce package --no-dependencies"
   },
   "dependencies": {
-    "toml-eslint-parser": "^0.12.0"
+    "toml-eslint-parser": "^1.0.0"
   },
   "devDependencies": {
     "@types/node": "^26.0.0",

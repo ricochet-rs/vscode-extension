@@ -5,8 +5,7 @@
  * has to point at the offending key, not at the file.
  */
 
-import { parseTOML, getStaticTOMLValue } from "toml-eslint-parser";
-import type { TOMLNode } from "toml-eslint-parser/lib/ast";
+import { parseTOML, getStaticTOMLValue, type AST } from "toml-eslint-parser";
 
 export interface Span {
   readonly start: number;
@@ -40,7 +39,7 @@ export class TomlDocument {
     const value = getStaticTOMLValue(ast) as TomlValue;
     const entries = new Map<string, Entry>();
     const tables = new Map<string, Span>();
-    collect(ast as unknown as TOMLNode, entries, tables);
+    collect(ast as unknown as AST.TOMLNode, entries, tables);
     return new TomlDocument(value, entries, tables);
   }
 
@@ -89,39 +88,39 @@ export class TomlSyntaxError extends Error {
 
 /** Walk the AST once, flattening every key into a dotted path with its span. */
 function collect(
-  node: TOMLNode,
+  node: AST.TOMLNode,
   entries: Map<string, Entry>,
   tables: Map<string, Span>,
   prefix: string[] = [],
 ): void {
   switch (node.type) {
     case "Program":
-      collect(node.body[0] as unknown as TOMLNode, entries, tables, prefix);
+      collect(node.body[0] as unknown as AST.TOMLNode, entries, tables, prefix);
       return;
     case "TOMLTopLevelTable":
       for (const child of node.body) {
-        collect(child as unknown as TOMLNode, entries, tables, prefix);
+        collect(child as unknown as AST.TOMLNode, entries, tables, prefix);
       }
       return;
     case "TOMLTable": {
       const path = [...prefix, ...node.resolvedKey.map(String)];
       tables.set(path.join("."), spanOf(node));
       for (const child of node.body) {
-        collect(child as unknown as TOMLNode, entries, tables, path);
+        collect(child as unknown as AST.TOMLNode, entries, tables, path);
       }
       return;
     }
     case "TOMLKeyValue": {
       const path = [...prefix, ...node.key.keys.map(keyName)];
       entries.set(path.join("."), {
-        span: spanOf(node.key as unknown as TOMLNode),
-        valueSpan: spanOf(node.value as unknown as TOMLNode),
+        span: spanOf(node.key as unknown as AST.TOMLNode),
+        valueSpan: spanOf(node.value as unknown as AST.TOMLNode),
         value: getStaticTOMLValue(node.value as never),
       });
       // An inline table contributes its own dotted paths so `[serve]` written inline validates too.
       if (node.value.type === "TOMLInlineTable") {
         for (const child of node.value.body) {
-          collect(child as unknown as TOMLNode, entries, tables, path);
+          collect(child as unknown as AST.TOMLNode, entries, tables, path);
         }
       }
       return;
