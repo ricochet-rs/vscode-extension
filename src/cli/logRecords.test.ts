@@ -16,6 +16,12 @@ describe("parseLogRecord", () => {
     });
   });
 
+  it("drops the colour codes a program wrote into its output", () => {
+    expect(parseLogRecord('{"line":"\\u001b[31mError\\u001b[0m: failed"}')?.line).toBe(
+      "Error: failed",
+    );
+  });
+
   it("ignores lines that are not records", () => {
     expect(parseLogRecord('{"event":"done"}')).toBeUndefined();
     expect(parseLogRecord("Following task run 01J")).toBeUndefined();

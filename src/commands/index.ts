@@ -136,17 +136,35 @@ async function showTaskOutput(client: RicochetClient, name: string, runId: strin
   output.appendLine(`${name}, run ${runId}`);
   output.show(true);
   let lines = 0;
-  await vscode.window.withProgress(
-    { location: vscode.ProgressLocation.Window, title: `Loading the output of ${name}` },
-    () =>
-      client.log(runId, {
-        onRecord: (record) => {
-          output.appendLine(formatLogRecord(record));
-          lines += 1;
-        },
-      }),
+  const finished = await vscode.window.withProgress(
+    {
+      location: vscode.ProgressLocation.Notification,
+      title: `Loading the output of ${name}`,
+      cancellable: true,
+    },
+    async (_progress, token) => {
+      const controller = new AbortController();
+      token.onCancellationRequested(() => controller.abort());
+      try {
+        await client.log(runId, {
+          signal: controller.signal,
+          onRecord: (record) => {
+            output.appendLine(formatLogRecord(record));
+            lines += 1;
+          },
+        });
+        return true;
+      } catch (error) {
+        if (error instanceof CancelledError) {
+          return false;
+        }
+        throw error;
+      }
+    },
   );
-  if (lines === 0) {
+  if (!finished) {
+    output.appendLine("Stopped loading the output.");
+  } else if (lines === 0) {
     output.appendLine("The run wrote no output.");
   }
 }

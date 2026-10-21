@@ -196,7 +196,8 @@ export class RicochetClient {
         options.onRecord?.(record);
       }
     };
-    await this.run(this.args(["log", id]), {
+    // `--` keeps an ID the server sent from being read as a flag.
+    await this.run(this.args(["log", "--", id]), {
       ...options,
       onStdout: (chunk) => {
         splitter.push(chunk).forEach(read);

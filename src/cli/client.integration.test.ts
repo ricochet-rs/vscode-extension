@@ -285,7 +285,7 @@ describe("RicochetClient", () => {
       { line: "rendering", timestamp: new Date("2026-10-21T09:15:02Z"), stream: "stdout" },
       { line: "plain", timestamp: undefined, stream: undefined },
     ]);
-    expect(argv()).toEqual(["-F", "json", "log", "01JRUN"]);
+    expect(argv()).toEqual(["-F", "json", "log", "--", "01JRUN"]);
   });
 
   it("reads a record whose line arrives in two chunks", async () => {

@@ -7,7 +7,8 @@
 
 import { spawn } from "node:child_process";
 
-const ANSI = /\u001b\[[0-9;]*[A-Za-z]/g;
+/** Terminal colour and cursor sequences, which an output channel would print literally. */
+export const ANSI = /\u001b\[[0-9;]*[A-Za-z]/g;
 
 export interface RunOptions {
   readonly cwd?: string;

@@ -2,6 +2,8 @@
  * The records `ricochet log -F json` writes, one per line of a server-side log.
  */
 
+import { ANSI } from "./exec.js";
+
 export interface LogRecord {
   readonly line: string;
   readonly timestamp: Date | undefined;
@@ -28,7 +30,7 @@ export function parseLogRecord(text: string): LogRecord | undefined {
   const timestamp =
     typeof record["timestamp"] === "string" ? new Date(record["timestamp"]) : undefined;
   return {
-    line,
+    line: line.replace(ANSI, ""),
     timestamp:
       timestamp !== undefined && !Number.isNaN(timestamp.getTime()) ? timestamp : undefined,
     stream: typeof record["stream"] === "string" ? record["stream"] : undefined,
