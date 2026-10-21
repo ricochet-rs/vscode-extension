@@ -19,13 +19,13 @@ Anything involving the bundle format, the `_ricochet.toml` schema semantics, or 
 
 The layering exists so that the logic worth testing never imports `vscode`.
 
-| Directory                                                         | Imports `vscode` | Responsibility                                      |
-| ----------------------------------------------------------------- | ---------------- | --------------------------------------------------- |
-| `src/toml/schema.ts`, `validate.ts`, `document.ts`                | no               | The `_ricochet.toml` schema and its rules           |
-| `src/cli/exec.ts`, `binary.ts`, `client.ts`, `taskRun.ts`         | no               | Locating, running and parsing the CLI               |
-| `src/project/config.ts`, `template.ts`, `bundle.ts`               | no               | Deriving item facts from a parsed config or dry run |
-| `src/toml/diagnostics.ts`, `completion.ts`                        | yes              | Editor bindings for the rules above                 |
-| `src/project/workspace.ts`, `src/views`, `src/commands`, `src/ui` | yes              | Everything user-facing                              |
+| Directory                                                                    | Imports `vscode` | Responsibility                                      |
+| ---------------------------------------------------------------------------- | ---------------- | --------------------------------------------------- |
+| `src/toml/schema.ts`, `validate.ts`, `document.ts`                           | no               | The `_ricochet.toml` schema and its rules           |
+| `src/cli/exec.ts`, `binary.ts`, `client.ts`, `taskRun.ts`, `deployEvents.ts` | no               | Locating, running and parsing the CLI               |
+| `src/project/config.ts`, `template.ts`, `bundle.ts`                          | no               | Deriving item facts from a parsed config or dry run |
+| `src/toml/diagnostics.ts`, `completion.ts`                                   | yes              | Editor bindings for the rules above                 |
+| `src/project/workspace.ts`, `src/views`, `src/commands`, `src/ui`            | yes              | Everything user-facing                              |
 
 Keep that split.
 A rule that moves into a file importing `vscode` stops being testable under Vitest and needs a whole extension host instead.
@@ -36,6 +36,7 @@ Under `-F json`, stdout carries the payload alone and status lines and errors go
 Read field names from the CLI's `-F json` output, not from the table it prints for people, since the two name things differently.
 `MINIMUM_VERSION` in `src/cli/binary.ts` is enforced before every command, so raise it in the same change that starts relying on a newer CLI feature.
 An untagged CLI build reports the last tagged version with a hash suffix, which sorts below that version, so test against a release binary.
+Before that release exists, point `ricochet.cli.path` at a wrapper script that answers `--version` with the upcoming version and execs the untagged build for everything else, and hold the merge until the release ships.
 
 ## Keeping the schema honest
 

@@ -12,6 +12,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { CliTooOldError, MINIMUM_VERSION } from "./binary.js";
 import { RicochetClient } from "./client.js";
+import { DeployError } from "./deployEvents.js";
 import { CliError } from "./exec.js";
 
 let dir: string;
@@ -213,18 +214,59 @@ describe("RicochetClient", () => {
     });
   });
 
-  it("deploys under -F json and streams the status lines from stderr", async () => {
+  it("deploys under -F json, reporting progress events and reading the done event", async () => {
     stub(
-      JSON.stringify({ id: "01J", deployment_id: "01JDEP" }),
+      [
+        '{"event":"bundling","files":3}',
+        '{"event":"uploading","bytes_sent":0,"bytes_total":200}',
+        '{"event":"uploading","bytes_sent":200,"bytes_total":200}',
+        '{"event":"done","id":"01J","deployment_id":"01JDEP","status":"deployed"}',
+      ].join("\n"),
       0,
       "local-app (new app)\n  Path: /tmp/app",
     );
+    const events: unknown[] = [];
     const lines: string[] = [];
-    await RicochetClient.create({ binaryPath: binary }).deploy(dir, {
+    const deployed = await RicochetClient.create({ binaryPath: binary }).deploy(dir, {
+      onProgress: (event) => events.push(event),
       onStderr: (chunk) => lines.push(chunk),
     });
+    expect(deployed).toEqual({ id: "01J", deploymentId: "01JDEP" });
+    expect(events).toEqual([
+      { event: "bundling", files: 3 },
+      { event: "uploading", bytesSent: 0, bytesTotal: 200 },
+      { event: "uploading", bytesSent: 200, bytesTotal: 200 },
+    ]);
     expect(lines.join("")).toContain("local-app (new app)");
     expect(argv()).toEqual(["-F", "json", "deploy", dir]);
+  });
+
+  it("throws the error event's kind and message when a deploy fails", async () => {
+    stub(
+      [
+        '{"event":"bundling","files":3}',
+        JSON.stringify({
+          event: "error",
+          kind: "auth",
+          message: "Credentials are invalid or expired.\nRun ricochet login to authenticate.",
+        }),
+      ].join("\n"),
+      1,
+      "Error: Credentials are invalid or expired",
+    );
+    const failure = await RicochetClient.create({ binaryPath: binary })
+      .deploy(dir)
+      .catch((error: unknown) => error);
+    expect(failure).toBeInstanceOf(DeployError);
+    expect((failure as DeployError).kind).toBe("auth");
+    expect((failure as DeployError).summary).toBe("Credentials are invalid or expired.");
+  });
+
+  it("throws rather than reporting success when a deploy ends without a done event", async () => {
+    stub('{"event":"bundling","files":3}', 0);
+    await expect(RicochetClient.create({ binaryPath: binary }).deploy(dir)).rejects.toThrow(
+      CliError,
+    );
   });
 
   it("refuses a CLI older than the minimum without running the command", async () => {

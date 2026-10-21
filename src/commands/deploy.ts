@@ -10,6 +10,7 @@ import { join } from "node:path";
 import { RicochetClient } from "../cli/client.js";
 import { CancelledError, CliError } from "../cli/exec.js";
 import { CliNotFoundError } from "../cli/binary.js";
+import { DeployError, uploadPercent } from "../cli/deployEvents.js";
 import { clientOptions, confirmBeforeDeploy } from "../config.js";
 import { itemUrl } from "../project/config.js";
 import { log } from "../ui/log.js";
@@ -50,16 +51,26 @@ export async function deploy(workspace: Workspace): Promise<void> {
       const controller = new AbortController();
       token.onCancellationRequested(() => controller.abort());
       progress.report({ message: "bundling" });
+      let uploaded = 0;
 
       try {
         const client = RicochetClient.create(clientOptions(project.uri));
         await client.deploy(project.directory, {
           signal: controller.signal,
+          onProgress: (event) => {
+            if (event.event === "bundling") {
+              log().info(`Bundled ${event.files} files.`);
+              progress.report({ message: `bundled ${event.files} files` });
+              return;
+            }
+            const percent = uploadPercent(event);
+            progress.report({ message: `uploading ${percent}%`, increment: percent - uploaded });
+            uploaded = percent;
+          },
           onStderr: (chunk) => {
             for (const line of chunk.split("\n").map((l) => l.trim())) {
               if (line.length > 0) {
                 log().info(line);
-                progress.report({ message: line.slice(0, 60) });
               }
             }
           },
@@ -146,7 +157,13 @@ function reportFailure(error: unknown): void {
         ? error.message
         : String(error);
   log().error(message);
+  const signIn = error instanceof DeployError && error.kind === "auth" ? ["Sign In"] : [];
   void vscode.window
-    .showErrorMessage(`Deploy failed: ${message}`, "Show Log")
-    .then((action) => (action === "Show Log" ? log().show() : undefined));
+    .showErrorMessage(`Deploy failed: ${message}`, ...signIn, "Show Log")
+    .then((action) => {
+      if (action === "Sign In") {
+        return vscode.commands.executeCommand("ricochet.login");
+      }
+      return action === "Show Log" ? log().show() : undefined;
+    });
 }
