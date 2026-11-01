@@ -8,9 +8,17 @@ when:
 labels:
   agent: thumper
 
+cache:
+  - key: 'bun-v1-{{ arch }}-{{ checksum "bun.lock" }}'
+    restore_keys: ["bun-v1-{{ arch }}-"]
+    paths: [.cache/bun]
+    save: never
+
 steps:
   package:
     image: reg.ricochet.rs/docker.io/oven/bun:1.4
+    environment:
+      BUN_INSTALL_CACHE_DIR: ${CI_WORKSPACE}/.cache/bun
     commands:
       - bun install --frozen-lockfile
       - bun run build
