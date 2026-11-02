@@ -61,6 +61,20 @@ export interface LogOptions extends RunOptions {
   readonly onRecord?: (record: LogRecord) => void;
 }
 
+/** A file `ricochet detect` judged deployable, with the content type it would deploy as. */
+export interface EntrypointCandidate {
+  readonly path: string;
+  readonly contentType: string;
+}
+
+/** The four answers `ricochet init` needs to write `_ricochet.toml` without prompting. */
+export interface InitAnswers {
+  readonly contentType: string;
+  readonly entrypoint: string;
+  readonly name: string;
+  readonly accessType: string;
+}
+
 export interface ClientOptions {
   /** Overrides the located binary, from `ricochet.cli.path`. */
   readonly binaryPath?: string;
@@ -229,6 +243,36 @@ export class RicochetClient {
         },
       ];
     });
+  }
+
+  /** The deployable entrypoints in `directory`, read without writing anything or contacting a server. */
+  async detect(directory: string, options: RunOptions = {}): Promise<EntrypointCandidate[]> {
+    const payload = await this.json(["detect", directory], { ...options, cwd: directory });
+    const entrypoints = isRecord(payload) ? asArray(payload["entrypoints"]) : [];
+    return entrypoints.flatMap((raw) => {
+      const path = str(raw, "path");
+      const contentType = str(raw, "content_type");
+      return path === undefined || contentType === undefined ? [] : [{ path, contentType }];
+    });
+  }
+
+  /** Writes `_ricochet.toml` in `directory` from `answers`, which `ricochet init` validates first. */
+  async init(directory: string, answers: InitAnswers, options: RunOptions = {}): Promise<void> {
+    await this.run(
+      this.args([
+        "init",
+        directory,
+        "--content-type",
+        answers.contentType,
+        "--entrypoint",
+        answers.entrypoint,
+        "--name",
+        answers.name,
+        "--access-type",
+        answers.accessType,
+      ]),
+      { ...options, cwd: directory },
+    );
   }
 
   /** Signs in with a pre-existing key, the only non-interactive login path. */

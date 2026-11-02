@@ -6,7 +6,7 @@
  */
 
 import * as vscode from "vscode";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { RicochetClient } from "../cli/client.js";
 import { CancelledError, CliError } from "../cli/exec.js";
 import { describeTaskRun } from "../cli/taskRun.js";
@@ -20,7 +20,7 @@ import type { BundleView } from "../views/bundleView.js";
 import type { DeploymentItem, DeploymentsView } from "../views/deploymentsView.js";
 import type { ServerItem, ServersView } from "../views/serversView.js";
 import { log, taskOutput } from "../ui/log.js";
-import { TEMPLATE } from "../project/template.js";
+import { ACCESS_TYPES } from "../toml/schema.js";
 
 export interface Views {
   readonly bundle: BundleView;
@@ -212,13 +212,15 @@ async function selectProject(workspace: Workspace): Promise<void> {
   }
 }
 
+/** Writes `_ricochet.toml` with `ricochet init`, offering the entrypoints `ricochet detect` finds. */
 async function createConfig(workspace: Workspace): Promise<void> {
   const folder = vscode.workspace.workspaceFolders?.[0];
   if (folder === undefined) {
     void vscode.window.showWarningMessage("Open a folder first.");
     return;
   }
-  const target = vscode.Uri.file(join(folder.uri.fsPath, CONFIG_FILENAME));
+  const directory = folder.uri.fsPath;
+  const target = vscode.Uri.file(join(directory, CONFIG_FILENAME));
   try {
     await vscode.workspace.fs.stat(target);
     void vscode.window.showWarningMessage(`${CONFIG_FILENAME} already exists.`);
@@ -227,7 +229,58 @@ async function createConfig(workspace: Workspace): Promise<void> {
   } catch {
     // Not existing is the expected path.
   }
-  await vscode.workspace.fs.writeFile(target, new TextEncoder().encode(TEMPLATE));
+
+  const client = RicochetClient.create(clientOptions(folder.uri));
+  const candidates = await vscode.window.withProgress(
+    { location: vscode.ProgressLocation.Window, title: "Looking for deployable content" },
+    () => client.detect(directory),
+  );
+  if (candidates.length === 0) {
+    void vscode.window.showWarningMessage(
+      `No deployable content was found in ${folder.name}. Add an entrypoint, such as \`app.R\`, \`app.py\` or \`report.qmd\`, and try again.`,
+    );
+    return;
+  }
+
+  const title = `Create ${CONFIG_FILENAME}`;
+  const entry = await vscode.window.showQuickPick(
+    candidates.map((candidate) => ({
+      label: candidate.path,
+      description: candidate.contentType,
+      candidate,
+    })),
+    { title, placeHolder: "Entrypoint to deploy" },
+  );
+  if (entry === undefined) {
+    return;
+  }
+  const name = await vscode.window.showInputBox({
+    title,
+    prompt: "Item name",
+    value: basename(directory),
+    validateInput: (value) => (value.trim().length > 0 ? undefined : "A name is required"),
+  });
+  if (name === undefined) {
+    return;
+  }
+  const access = await vscode.window.showQuickPick([...ACCESS_TYPES], {
+    title,
+    placeHolder: "Who can open the item",
+  });
+  if (access === undefined) {
+    return;
+  }
+
+  await vscode.window.withProgress(
+    { location: vscode.ProgressLocation.Window, title: `Writing ${CONFIG_FILENAME}` },
+    () =>
+      client.init(directory, {
+        contentType: entry.candidate.contentType,
+        entrypoint: entry.candidate.path,
+        name: name.trim(),
+        accessType: access,
+      }),
+  );
   await workspace.refresh();
   await vscode.window.showTextDocument(target);
 }

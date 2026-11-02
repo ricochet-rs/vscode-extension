@@ -308,6 +308,46 @@ describe("RicochetClient", () => {
     expect(records).toEqual([{ line: "first half", timestamp: undefined, stream: undefined }]);
   });
 
+  it("reads the entrypoints `detect -F json` finds and drops malformed ones", async () => {
+    stub(
+      JSON.stringify({
+        language: "r",
+        content_types: ["shiny"],
+        entrypoints: [{ path: "app.R", content_type: "shiny" }, { path: "orphan.R" }],
+        package_file: { kind: "renv.lock", path: "renv.lock", found: true },
+        static: null,
+      }),
+    );
+    await expect(RicochetClient.create({ binaryPath: binary }).detect(dir)).resolves.toEqual([
+      { path: "app.R", contentType: "shiny" },
+    ]);
+    expect(argv()).toEqual(["-F", "json", "detect", dir]);
+  });
+
+  it("answers every init prompt with a flag", async () => {
+    stub("{}");
+    await RicochetClient.create({ binaryPath: binary }).init(dir, {
+      contentType: "quarto-r",
+      entrypoint: "report.qmd",
+      name: "weekly report",
+      accessType: "internal",
+    });
+    expect(argv()).toEqual([
+      "-F",
+      "json",
+      "init",
+      dir,
+      "--content-type",
+      "quarto-r",
+      "--entrypoint",
+      "report.qmd",
+      "--name",
+      "weekly report",
+      "--access-type",
+      "internal",
+    ]);
+  });
+
   it("refuses a CLI older than the minimum without running the command", async () => {
     stub("[]", 0, "", "1.2.0");
     const client = RicochetClient.create({ binaryPath: binary });

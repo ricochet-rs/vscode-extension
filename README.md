@@ -63,7 +63,7 @@ All commands are under the **Ricochet** category.
 | `Ricochet: Deploy`                        | Deploy the active project.                                        |
 | `Ricochet: Run Task Now`                  | Run a deployed task, report how it finished, and show its output. |
 | `Ricochet: Open Deployed Item in Browser` | Open the item in the web UI.                                      |
-| `Ricochet: Create _ricochet.toml`         | Write a minimal, valid config to start from.                      |
+| `Ricochet: Create _ricochet.toml`         | Create a config for an entrypoint found in the folder.            |
 | `Ricochet: Select Active Project`         | Choose between several projects in one workspace.                 |
 | `Ricochet: Add Server`                    | Add a server profile.                                             |
 | `Ricochet: Sign In to Server`             | Store an API key for a server.                                    |

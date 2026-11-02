@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Require the `ricochet` CLI 1.4.0 or newer, and say so with an upgrade hint when an older one is installed.
+- **Create \_ricochet.toml** lists the entrypoints found in the folder and asks for a name and access type, instead of writing a fixed Shiny template.
 - Deploying shows the number of bundled files and the upload percentage.
 - A deploy that fails because the server rejects your key offers **Sign In**.
 - The Servers view shows which servers have a stored key.
