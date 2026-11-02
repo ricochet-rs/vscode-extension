@@ -81,6 +81,8 @@ export interface Shown {
 export class RecordedUi {
   readonly shown: Shown[] = [];
   readonly opened: string[] = [];
+  /** Modal prompts, which the recorder answers with `modalAnswer`. */
+  readonly modals: Array<{ readonly message: string; readonly detail: string | undefined }> = [];
   /** The button a modal message answers with; undefined behaves like Cancel. */
   modalAnswer: string | undefined;
   /** Answers for `showQuickPick`, in order; each picks the item whose label matches. */
@@ -97,6 +99,8 @@ export class RecordedUi {
       (text: string, ...rest: unknown[]): Promise<string | undefined> => {
         const options = rest[0];
         if (typeof options === "object" && options !== null && "modal" in options) {
+          const { detail } = options as vscode.MessageOptions;
+          this.modals.push({ message: text, detail });
           return Promise.resolve(options.modal === true ? this.modalAnswer : undefined);
         }
         this.shown.push({

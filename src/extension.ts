@@ -36,6 +36,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     vscode.window.registerTreeDataProvider("ricochet.deployments", views.deployments),
     vscode.window.registerTreeDataProvider("ricochet.servers", views.servers),
     new StatusBar(workspace),
+    views.deployments,
   );
 
   registerDiagnostics(context);

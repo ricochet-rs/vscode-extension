@@ -88,6 +88,20 @@ describe("Deploy", () => {
     assert.deepEqual(failure?.items, ["Sign In", "Show Log"]);
   });
 
+  it("names the workspace folder, not its absolute path, in the confirmation", async () => {
+    reply("deploy", jsonLines(EVENTS));
+
+    await vscode.commands.executeCommand("ricochet.deploy");
+
+    const folder = vscode.workspace.workspaceFolders?.[0]?.name;
+    assert.deepEqual(ui.modals, [
+      {
+        message: "Deploy Fixture App?",
+        detail: `Everything under ${folder} will be bundled and uploaded.`,
+      },
+    ]);
+  });
+
   it("sends nothing when the confirmation is cancelled", async () => {
     reply("deploy", jsonLines(EVENTS));
     ui.modalAnswer = undefined;

@@ -9,7 +9,7 @@ import * as vscode from "vscode";
 import { itemKind } from "../project/config.js";
 import type { Workspace } from "../project/workspace.js";
 import type { Deployment } from "../cli/client.js";
-import { deploymentHistory } from "../project/deployments.js";
+import { deploymentHistory, isSettling } from "../project/deployments.js";
 import { RicochetClient } from "../cli/client.js";
 import { clientOptions } from "../config.js";
 import { log } from "../ui/log.js";
@@ -45,19 +45,32 @@ const NOT_DEPLOYED = new MessageItem(
   "The server has no item with this content ID that your key can see. Deploying creates it.",
 );
 
-export class DeploymentsView implements vscode.TreeDataProvider<vscode.TreeItem> {
+/** How often a pending deployment is read again while the view shows it. */
+const SETTLE_POLL_MS = 5_000;
+
+export class DeploymentsView
+  implements vscode.TreeDataProvider<vscode.TreeItem>, vscode.Disposable
+{
   private readonly changed = new vscode.EventEmitter<void>();
   readonly onDidChangeTreeData = this.changed.event;
 
   private cache: vscode.TreeItem[] | undefined;
+  private poll: ReturnType<typeof setTimeout> | undefined;
 
   constructor(private readonly workspace: Workspace) {
     workspace.onDidChange(() => this.refresh());
   }
 
   refresh(): void {
+    clearTimeout(this.poll);
+    this.poll = undefined;
     this.cache = undefined;
     this.changed.fire();
+  }
+
+  dispose(): void {
+    clearTimeout(this.poll);
+    this.changed.dispose();
   }
 
   getTreeItem(element: vscode.TreeItem): vscode.TreeItem {
@@ -90,6 +103,10 @@ export class DeploymentsView implements vscode.TreeDataProvider<vscode.TreeItem>
     }
     const client = RicochetClient.create(clientOptions(project.uri));
     const history = await deploymentHistory(client, kind, id, { cwd: project.directory });
+    // A hidden view is not asked for its children, so the polling stops with it.
+    if (isSettling(history)) {
+      this.poll = setTimeout(() => this.refresh(), SETTLE_POLL_MS);
+    }
     switch (history.state) {
       case "listed":
         return history.deployments.map((deployment) => new DeploymentItem(deployment));

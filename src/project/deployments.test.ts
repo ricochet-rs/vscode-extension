@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Deployment } from "../cli/client.js";
-import { deploymentHistory, type HistoryClient } from "./deployments.js";
+import { deploymentHistory, isSettling, type HistoryClient } from "./deployments.js";
 
 const ID = "01JTESTAPP0000000000000000";
 const DEPLOYMENT: Deployment = { id: "01JDEP", status: "success", deployedAt: undefined };
@@ -65,5 +65,26 @@ describe("deploymentHistory", () => {
         ID,
       ),
     ).toEqual({ state: "none" });
+  });
+});
+
+describe("isSettling", () => {
+  const listed = (...statuses: string[]) =>
+    ({
+      state: "listed",
+      deployments: statuses.map((status, i) => ({ id: `d${i}`, status, deployedAt: undefined })),
+    }) as const;
+
+  it("is true while any listed deployment is pending", () => {
+    expect(isSettling(listed("pending", "success"))).toBe(true);
+  });
+
+  it("is false once every deployment has settled", () => {
+    expect(isSettling(listed("success", "failure"))).toBe(false);
+  });
+
+  it("is false when nothing is listed", () => {
+    expect(isSettling({ state: "none" })).toBe(false);
+    expect(isSettling({ state: "not-deployed" })).toBe(false);
   });
 });

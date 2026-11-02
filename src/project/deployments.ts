@@ -37,6 +37,14 @@ export async function deploymentHistory(
   }
 }
 
+/** Whether a listed deployment has yet to settle, so the history is worth reading again. */
+export function isSettling(history: DeploymentHistory): boolean {
+  return (
+    history.state === "listed" &&
+    history.deployments.some((deployment) => deployment.status === "pending")
+  );
+}
+
 /** False when the item list cannot be read, so a failure is never mistaken for a missing item. */
 async function isUnknownItem(
   client: HistoryClient,
