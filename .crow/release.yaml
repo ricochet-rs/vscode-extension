@@ -1,6 +1,7 @@
 # Push a `v<version>` tag on main to release.
 # The tag's version is written into package.json and the CHANGELOG's Unreleased heading,
 # committed to main as ricochet-bot, and the tag is moved onto that commit before anything is published.
+# A tag on a commit that is not on main, or pushed after main moved on, fails before publishing.
 when:
   - event: tag
     ref: refs/tags/v*
@@ -54,27 +55,30 @@ steps:
     commands:
       - apk add --no-cache -q git openssh-client
       - |
-        set -euxo pipefail
+        set -euo pipefail
         mkdir -p ~/.ssh
-        echo "$SSH_KEY" > ~/.ssh/id_ed25519
+        # Written untraced so the key never reaches the log.
+        printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
         chmod 600 ~/.ssh/id_ed25519
         ssh-keyscan -t ed25519 github.com >> ~/.ssh/known_hosts 2>/dev/null
+        set -x
 
+        # The workspace was written by `bun install`, so ignore any hooks or ssh command it planted.
+        git() { command git -c core.hooksPath=/dev/null -c core.sshCommand=ssh "$@"; }
         git config user.name "ricochet-bot"
         git config user.email "droid@ricochet.rs"
         git remote add origin-push git@github.com:ricochet-rs/vscode-extension.git
         git fetch origin-push main
 
-        if [ "$(git rev-parse HEAD)" = "$(git rev-parse origin-push/main)" ] || ! git log -1 --format=%s | grep -q '^chore(release): '; then
+        git merge-base --is-ancestor "$CI_COMMIT_SHA" origin-push/main || { echo "$CI_COMMIT_TAG is not on main, so nothing is released" >&2; exit 1; }
+
+        if ! git log -1 --format=%s | grep -q '^chore(release): '; then
           echo "==> No bump commit to push"
           exit 0
         fi
 
-        # Main may have moved since the tag was pushed.
-        git rebase origin-push/main
-        git push origin-push HEAD:main
-        git tag -d "$CI_COMMIT_TAG"
-        git tag "$CI_COMMIT_TAG" HEAD
+        # A plain push only fast-forwards, so main moving since the tag fails here instead of publishing a tree main never had.
+        git push origin-push HEAD:main || { echo "main moved since $CI_COMMIT_TAG was pushed. Delete the tag and tag the new main." >&2; exit 1; }
         git push origin-push --force "$CI_COMMIT_TAG"
 
   "Create release":
