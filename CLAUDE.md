@@ -53,8 +53,11 @@ Two rules are deliberately looser than the server's, because the editor cannot k
 
 ## Validation
 
-- `bun run typecheck`, `bun run lint`, `bun run test` and `bun run format:check` are what CI runs.
-- Run all four before opening a pull request.
+- `bun run typecheck`, `bun run lint`, `bun run test`, `bun run test:host` and `bun run format:check` are what CI runs.
+- Run all five before opening a pull request.
+- Cover a command, view or diagnostic wiring in `test/host/suite`, and the logic behind it in a Vitest test beside the module.
+- Keep `mocha` on 11, since VS Code 1.90's extension host cannot `require` the ESM-only mocha 12.
+- Point `test/host/runTest.ts` at the oldest VS Code `engines.vscode` admits, and raise both together.
 - Use Bun. Never npm, yarn, or pnpm, and do not add a second lockfile.
 
 ## Publishing

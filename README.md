@@ -80,12 +80,15 @@ All commands are under the **Ricochet** category.
 bun install
 bun run build
 bun run test
+bun run test:host
 ```
 
 Press <kbd>F5</kbd> in VS Code to launch an Extension Development Host.
 
-`bun run typecheck`, `bun run lint` and `bun run test` are what CI runs.
-The logic that is worth testing lives in modules that do not import `vscode`, so the suite runs under plain Vitest with no extension host.
+`bun run typecheck`, `bun run lint`, `bun run test` and `bun run test:host` are what CI runs.
+`bun run test` runs the modules that do not import `vscode` under plain Vitest.
+`bun run test:host` downloads VS Code into `.vscode-test`, opens a copy of `test/host/fixture` in it, and drives the commands against a stub `ricochet` executable, so it never contacts a server.
+On Linux without a display, run it under `xvfb-run -a`.
 
 ## License
 

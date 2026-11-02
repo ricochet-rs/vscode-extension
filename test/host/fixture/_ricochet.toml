@@ -1,0 +1,10 @@
+[content]
+id = "01JTESTAPP0000000000000000"
+name = "Fixture App"
+entrypoint = "app.py"
+access_type = "private"
+content_type = "shiny-py"
+
+[language]
+name = "python"
+packages = "uv.lock"
