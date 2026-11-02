@@ -9,11 +9,13 @@ import {
   ACCESS_TYPES,
   CONTENT_TYPES,
   CONTENT_TYPE_NAMES,
+  FIELD_DOCS,
   LANGUAGES,
   PACKAGE_FILES,
   PACKAGE_FILE_FOR,
   REQUIRED_SERVE_KEYS,
   type ContentTypeSpec,
+  type FieldDoc,
 } from "./schema.js";
 import type { Span, TomlDocument } from "./document.js";
 
@@ -60,6 +62,7 @@ export function validate(doc: TomlDocument): Problem[] {
     });
   }
 
+  checkKinds(doc, problems);
   checkEnum(doc, problems, "content.access_type", ACCESS_TYPES);
   checkEnum(doc, problems, "language.name", LANGUAGES);
   checkEnum(doc, problems, "language.packages", PACKAGE_FILES);
@@ -77,6 +80,57 @@ export function validate(doc: TomlDocument): Problem[] {
   checkAlwaysExcluded(doc, problems);
 
   return problems;
+}
+
+/** Reports values serde would refuse for their type or range, before any rule reads them. */
+function checkKinds(doc: TomlDocument, problems: Problem[]): void {
+  for (const [path, field] of Object.entries(FIELD_DOCS)) {
+    const entry = doc.entry(path);
+    if (entry === undefined) {
+      continue;
+    }
+    const expected = kindMismatch(entry.value, field);
+    if (expected !== undefined) {
+      problems.push({
+        span: entry.valueSpan,
+        message: `\`${path}\` must be ${expected}.`,
+        severity: "error",
+      });
+    }
+  }
+}
+
+/** Describes the value `field` expects when `value` does not fit it. */
+function kindMismatch(value: unknown, field: FieldDoc): string | undefined {
+  switch (field.kind) {
+    case "string":
+      return typeof value === "string" ? undefined : "a string";
+    case "boolean":
+      return typeof value === "boolean" ? undefined : "`true` or `false`";
+    case "strings":
+      return Array.isArray(value) && value.every((v) => typeof v === "string")
+        ? undefined
+        : "a list of strings";
+    case "integer": {
+      const { min, max } = field;
+      const range =
+        max === undefined
+          ? `a whole number, ${min ?? 0} or more`
+          : `a whole number from ${min ?? 0} to ${max}`;
+      const whole =
+        typeof value === "bigint"
+          ? Number(value)
+          : typeof value === "number" && Number.isInteger(value)
+            ? value
+            : undefined;
+      if (whole === undefined) {
+        return range;
+      }
+      return (min !== undefined && whole < min) || (max !== undefined && whole > max)
+        ? range
+        : undefined;
+    }
+  }
 }
 
 function checkEnum(
@@ -242,14 +296,6 @@ function checkServeTable(doc: TomlDocument, problems: Problem[]): void {
     problems.push({
       span: doc.entry("serve.max_instances")?.valueSpan ?? table,
       message: `\`max_instances\` (${max}) is below \`min_instances\` (${min}); the server clamps it up.`,
-      severity: "warning",
-    });
-  }
-  const threshold = numberAt(doc, "serve.spawn_threshold");
-  if (threshold !== undefined && threshold > 100) {
-    problems.push({
-      span: doc.entry("serve.spawn_threshold")?.valueSpan ?? table,
-      message: "`spawn_threshold` is a percentage and is clamped to 100.",
       severity: "warning",
     });
   }

@@ -50,12 +50,12 @@ Set `ricochet.cli.path` if it lives somewhere the extension does not look.
 
 ## Settings
 
-| Setting                       | Default | Purpose                                                                                                                                   |
-| ----------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `ricochet.cli.path`           | `""`    | Absolute path to the `ricochet` executable. Empty means search `PATH` and the usual install locations.                                    |
-| `ricochet.server`             | `""`    | Server profile name or URL to target. Empty means the CLI's default server. Set it to a full URL to enable the "open in browser" actions. |
-| `ricochet.deploy.confirm`     | `true`  | Ask before deploying.                                                                                                                     |
-| `ricochet.validation.enabled` | `true`  | Report `_ricochet.toml` problems as diagnostics.                                                                                          |
+| Setting                       | Default | Purpose                                                                                                |
+| ----------------------------- | ------- | ------------------------------------------------------------------------------------------------------ |
+| `ricochet.cli.path`           | `""`    | Absolute path to the `ricochet` executable. Empty means search `PATH` and the usual install locations. |
+| `ricochet.server`             | `""`    | Server profile name or URL to target. Empty means the CLI's default server.                            |
+| `ricochet.deploy.confirm`     | `true`  | Ask before deploying.                                                                                  |
+| `ricochet.validation.enabled` | `true`  | Report `_ricochet.toml` problems as diagnostics.                                                       |
 
 `ricochet.server` is resolved per resource, so a multi-root workspace can target a different server per folder.
 

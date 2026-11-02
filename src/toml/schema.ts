@@ -193,54 +193,129 @@ export const PACKAGE_FILE_FOR: Readonly<Record<Language, PackageFile>> = {
 /** Paths that are dropped from every bundle regardless of `include`. */
 export const ALWAYS_EXCLUDED = [".venv", ".renv", "__pycache__"] as const;
 
+/** The TOML value shape serde accepts for a key. */
+export type FieldKind = "string" | "integer" | "boolean" | "strings";
+
 export interface FieldDoc {
   readonly detail: string;
+  readonly kind: FieldKind;
   readonly values?: readonly string[];
+  /** Inclusive bounds for an integer; `max` is omitted when only the Rust type bounds it. */
+  readonly min?: number;
+  readonly max?: number;
 }
 
 /** Backing data for key completion and hovers, keyed by `<table>.<key>`. */
 export const FIELD_DOCS: Readonly<Record<string, FieldDoc>> = {
-  "content.id": { detail: "Item ULID. Omit it; the first successful deploy writes it back." },
-  "content.name": { detail: "Display name, 120 characters or fewer." },
-  "content.slug": { detail: "URL slug. Derived from the name when absent." },
-  "content.entrypoint": { detail: "Path relative to the deployed directory." },
-  "content.access_type": { detail: "Who may reach the item.", values: [...ACCESS_TYPES] },
-  "content.content_type": { detail: "What is deployed.", values: CONTENT_TYPE_NAMES },
-  "content.summary": { detail: "Short description shown in the UI." },
-  "content.thumbnail": { detail: "Relative path to a thumbnail image." },
-  "content.tags": { detail: "Free-form tags." },
-  "content.include": { detail: "When set, only matching paths are bundled." },
-  "content.exclude": { detail: "Matching paths are dropped after `include` is applied." },
+  "content.id": {
+    detail: "Item ULID. Omit it; the first successful deploy writes it back.",
+    kind: "string",
+  },
+  "content.name": { detail: "Display name, 120 characters or fewer.", kind: "string" },
+  "content.slug": { detail: "URL slug. Derived from the name when absent.", kind: "string" },
+  "content.entrypoint": { detail: "Path relative to the deployed directory.", kind: "string" },
+  "content.access_type": {
+    detail: "Who may reach the item.",
+    values: [...ACCESS_TYPES],
+    kind: "string",
+  },
+  "content.content_type": {
+    detail: "What is deployed.",
+    values: CONTENT_TYPE_NAMES,
+    kind: "string",
+  },
+  "content.summary": { detail: "Short description shown in the UI.", kind: "string" },
+  "content.thumbnail": { detail: "Relative path to a thumbnail image.", kind: "string" },
+  "content.tags": { detail: "Free-form tags.", kind: "strings" },
+  "content.include": { detail: "When set, only matching paths are bundled.", kind: "strings" },
+  "content.exclude": {
+    detail: "Matching paths are dropped after `include` is applied.",
+    kind: "strings",
+  },
   "content.exec_env": {
     detail: "Named execution environment, for Docker and Kubernetes backends.",
+    kind: "string",
   },
-  "language.name": { detail: "Must agree with the content type.", values: [...LANGUAGES] },
-  "language.packages": { detail: "Lockfile naming the dependencies.", values: [...PACKAGE_FILES] },
-  "schedule.cron": { detail: "Cron expression, or a shorthand such as `@daily`." },
-  "schedule.parameterized": { detail: "Whether the task accepts parameters at invocation." },
-  "schedule.on_success": { detail: "Notification targets for a successful run." },
-  "schedule.on_error": { detail: "Notification targets for a failed run." },
+  "language.name": {
+    detail: "Must agree with the content type.",
+    values: [...LANGUAGES],
+    kind: "string",
+  },
+  "language.packages": {
+    detail: "Lockfile naming the dependencies.",
+    values: [...PACKAGE_FILES],
+    kind: "string",
+  },
+  "schedule.cron": { detail: "Cron expression, or a shorthand such as `@daily`.", kind: "string" },
+  "schedule.parameterized": {
+    detail: "Whether the task accepts parameters at invocation.",
+    kind: "boolean",
+  },
+  "schedule.on_success": { detail: "Notification targets for a successful run.", kind: "strings" },
+  "schedule.on_error": { detail: "Notification targets for a failed run.", kind: "strings" },
   "schedule.max_duration": {
     detail: "Seconds an invocation may run before it is stopped. Defaults to the server limit.",
+    kind: "integer",
+    min: 1,
   },
-  "static.index": { detail: "File served at the item root, conventionally `index.html`." },
-  "static.output_dir": { detail: "Directory holding the rendered output." },
-  "static.render_fn": { detail: "Custom render function." },
-  "serve.min_instances": { detail: "Instances started eagerly." },
-  "serve.max_instances": { detail: "Hard ceiling on concurrent instances." },
+  "static.index": {
+    detail: "File served at the item root, conventionally `index.html`.",
+    kind: "string",
+  },
+  "static.output_dir": { detail: "Directory holding the rendered output.", kind: "string" },
+  "static.render_fn": { detail: "Custom render function.", kind: "string" },
+  "serve.min_instances": { detail: "Instances started eagerly.", kind: "integer", min: 0 },
+  "serve.max_instances": {
+    detail: "Hard ceiling on concurrent instances.",
+    kind: "integer",
+    min: 0,
+  },
   "serve.spawn_threshold": {
     detail: "Percentage of `max_connections` at which a new instance spawns.",
+    kind: "integer",
+    min: 1,
+    max: 100,
   },
-  "serve.max_connections": { detail: "Connections a single instance will accept." },
-  "serve.max_connection_age": { detail: "Maximum lifetime of an instance, in seconds." },
-  "serve.inactive_timeout": { detail: "Idle seconds before a connection is closed." },
-  "serve.connection_timeout": { detail: "Seconds allowed to establish a connection." },
-  "resources.cpu_request": { detail: "Millicores, such as `500m`, or a plain number of cores." },
-  "resources.cpu_limit": { detail: "Millicores, such as `1000m`, or a plain number of cores." },
-  "resources.memory_request": { detail: "`Ki`, `Mi`, or `Gi` suffix, or plain bytes." },
-  "resources.memory_limit": { detail: "`Ki`, `Mi`, or `Gi` suffix, or plain bytes." },
+  "serve.max_connections": {
+    detail: "Connections a single instance will accept.",
+    kind: "integer",
+    min: 0,
+  },
+  "serve.max_connection_age": {
+    detail: "Maximum lifetime of an instance, in seconds.",
+    kind: "integer",
+    min: 1,
+  },
+  "serve.inactive_timeout": {
+    detail: "Idle seconds before a connection is closed.",
+    kind: "integer",
+    min: 1,
+  },
+  "serve.connection_timeout": {
+    detail: "Seconds allowed to establish a connection.",
+    kind: "integer",
+    min: 1,
+  },
+  "resources.cpu_request": {
+    detail: "Millicores, such as `500m`, or a plain number of cores.",
+    kind: "string",
+  },
+  "resources.cpu_limit": {
+    detail: "Millicores, such as `1000m`, or a plain number of cores.",
+    kind: "string",
+  },
+  "resources.memory_request": {
+    detail: "`Ki`, `Mi`, or `Gi` suffix, or plain bytes.",
+    kind: "string",
+  },
+  "resources.memory_limit": {
+    detail: "`Ki`, `Mi`, or `Gi` suffix, or plain bytes.",
+    kind: "string",
+  },
   "resources.restore_timeout": {
     detail: "Dependency restore timeout in seconds. `0` disables it.",
+    kind: "integer",
+    min: 0,
   },
 };
 
