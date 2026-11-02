@@ -11,7 +11,7 @@ import { RicochetClient } from "../cli/client.js";
 import { CancelledError, CliError } from "../cli/exec.js";
 import { CliNotFoundError } from "../cli/binary.js";
 import { DeployError, uploadPercent } from "../cli/deployEvents.js";
-import { clientOptions, confirmBeforeDeploy } from "../config.js";
+import { clientOptions, confirmBeforeDeploy, serverUrl } from "../config.js";
 import { itemUrl } from "../project/config.js";
 import { log } from "../ui/log.js";
 import type { Project, Workspace } from "../project/workspace.js";
@@ -41,7 +41,7 @@ export async function deploy(workspace: Workspace): Promise<void> {
     }
   }
 
-  await vscode.window.withProgress(
+  const deployed = await vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
       title: `Deploying ${project.config.name ?? "project"}`,
@@ -75,12 +75,17 @@ export async function deploy(workspace: Workspace): Promise<void> {
             }
           },
         });
-        await onSuccess(workspace, project);
+        return true;
       } catch (error) {
         reportFailure(error);
+        return false;
       }
     },
   );
+  // Outside `withProgress`, so the progress closes before this message waits on the user.
+  if (deployed) {
+    await onSuccess(workspace, project);
+  }
 }
 
 /** Checks the things that make a deploy fail immediately, before spending a bundle on it. */
@@ -118,10 +123,8 @@ async function onSuccess(workspace: Workspace, project: Project): Promise<void> 
   await workspace.refresh();
   const updated = workspace.all.find((p) => p.uri.toString() === project.uri.toString());
   const config = updated?.config ?? project.config;
-  const server = vscode.workspace
-    .getConfiguration("ricochet", project.uri)
-    .get<string>("server", "");
-  const url = server.startsWith("http") ? itemUrl(server, config) : undefined;
+  const server = await serverUrl(project.uri);
+  const url = server === undefined ? undefined : itemUrl(server, config);
 
   const action = await vscode.window.showInformationMessage(
     `Deployed ${config.name ?? "project"}.`,

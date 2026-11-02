@@ -7,7 +7,7 @@ It needs the `ricochet` CLI 1.4.0 or newer, and offers an upgrade hint when an o
 
 ### Configuration
 
-- Problems in `_ricochet.toml` show up as editor diagnostics, checked against the rules the server applies.
+- Problems in `_ricochet.toml` show up as editor diagnostics, checked against the rules the server applies, including the type and range of each value.
 - Completion offers every key and value the `_ricochet.toml` schema allows.
 - **Create \_ricochet.toml** lists the entrypoints found in the folder, asks for a name and access type, and writes the file.
 
@@ -18,6 +18,7 @@ It needs the `ricochet` CLI 1.4.0 or newer, and offers an upgrade hint when an o
 - A deploy rejected because of your key offers **Sign In**.
 - The **Deployments** view lists the item's deployments with their time and status, and opens any of them in the web UI.
 - The **Deployments** view shows **Not deployed yet** until the server has the item.
+- **Open in Browser** finds the server URL from `ricochet.server`, whether it holds a URL or a profile name, or from the CLI's default server when it is empty.
 
 ### Tasks
 

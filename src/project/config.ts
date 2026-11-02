@@ -7,7 +7,7 @@
 
 import { CONTENT_TYPES } from "../toml/schema.js";
 import { TomlDocument } from "../toml/document.js";
-import type { ItemKind } from "../cli/client.js";
+import type { ItemKind, Server } from "../cli/client.js";
 
 export interface ProjectConfig {
   readonly name: string | undefined;
@@ -52,6 +52,17 @@ export function itemUrl(serverUrl: string, config: ProjectConfig): string | unde
   }
   const base = serverUrl.replace(/\/+$/, "");
   return kind === "task" ? `${base}/tasks/${config.id}` : `${base}/apps/${config.id}/overview`;
+}
+
+/** The URL `ricochet.server` points at: the URL itself, the named profile's, or the default profile's when empty. */
+export function resolveServerUrl(setting: string, servers: readonly Server[]): string | undefined {
+  const target = setting.trim();
+  if (target.startsWith("http")) {
+    return target;
+  }
+  const server =
+    target.length === 0 ? servers.find((s) => s.isDefault) : servers.find((s) => s.name === target);
+  return server?.url;
 }
 
 export function deploymentUrl(serverUrl: string, deploymentId: string): string {

@@ -6,7 +6,8 @@
  */
 
 import * as vscode from "vscode";
-import type { ClientOptions } from "./cli/client.js";
+import { RicochetClient, type ClientOptions } from "./cli/client.js";
+import { resolveServerUrl } from "./project/config.js";
 
 export function clientOptions(scope?: vscode.Uri): ClientOptions {
   const config = vscode.workspace.getConfiguration("ricochet", scope ?? null);
@@ -20,4 +21,15 @@ export function clientOptions(scope?: vscode.Uri): ClientOptions {
 
 export function confirmBeforeDeploy(): boolean {
   return vscode.workspace.getConfiguration("ricochet").get<boolean>("deploy.confirm", true);
+}
+
+/** The URL of the server commands target, looking a profile name up in the CLI's server list. */
+export async function serverUrl(scope: vscode.Uri): Promise<string | undefined> {
+  const setting = vscode.workspace.getConfiguration("ricochet", scope).get<string>("server", "");
+  const servers = setting.trim().startsWith("http")
+    ? []
+    : await RicochetClient.create(clientOptions(scope))
+        .servers()
+        .catch(() => []);
+  return resolveServerUrl(setting, servers);
 }

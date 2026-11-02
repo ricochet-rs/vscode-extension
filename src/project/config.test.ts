@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { credentialsUrl, deploymentUrl, itemKind, itemUrl, readConfig } from "./config.js";
+import type { Server } from "../cli/client.js";
+import {
+  credentialsUrl,
+  deploymentUrl,
+  itemKind,
+  itemUrl,
+  readConfig,
+  resolveServerUrl,
+} from "./config.js";
 
 const TASK = `
 [content]
@@ -103,5 +111,31 @@ describe("credentialsUrl", () => {
 
   it("returns undefined for a server url it cannot parse", () => {
     expect(credentialsUrl("not a url")).toBeUndefined();
+  });
+});
+
+describe("resolveServerUrl", () => {
+  const servers: Server[] = [
+    { name: "prod", url: "https://prod.example.com/", isDefault: false, hasKey: true },
+    { name: "local", url: "http://localhost:6188/", isDefault: true, hasKey: true },
+  ];
+
+  it("returns a configured URL as it is", () => {
+    expect(resolveServerUrl(" https://other.example.com ", servers)).toBe(
+      "https://other.example.com",
+    );
+  });
+
+  it("looks a profile name up in the server list", () => {
+    expect(resolveServerUrl("prod", servers)).toBe("https://prod.example.com/");
+  });
+
+  it("falls back to the default profile when the setting is empty", () => {
+    expect(resolveServerUrl("", servers)).toBe("http://localhost:6188/");
+  });
+
+  it("returns undefined for a profile the CLI does not know", () => {
+    expect(resolveServerUrl("missing", servers)).toBeUndefined();
+    expect(resolveServerUrl("", [])).toBeUndefined();
   });
 });

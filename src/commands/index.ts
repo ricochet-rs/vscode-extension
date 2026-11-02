@@ -12,7 +12,7 @@ import { CancelledError, CliError } from "../cli/exec.js";
 import { describeTaskRun } from "../cli/taskRun.js";
 import { formatLogRecord } from "../cli/logRecords.js";
 import { CliNotFoundError } from "../cli/binary.js";
-import { clientOptions } from "../config.js";
+import { clientOptions, serverUrl } from "../config.js";
 import { deploy } from "./deploy.js";
 import { credentialsUrl, deploymentUrl, itemKind, itemUrl } from "../project/config.js";
 import { CONFIG_FILENAME, type Workspace } from "../project/workspace.js";
@@ -109,7 +109,7 @@ async function invokeTask(workspace: Workspace): Promise<void> {
 
   const outcome = describeTaskRun(name, run);
   log().info(`Task run ${run.id}: ${run.status}`);
-  const url = serverUrl(project.uri);
+  const url = await serverUrl(project.uri);
   const openable = url !== undefined ? ["Open in Browser"] : [];
   const show =
     outcome.level === "error"
@@ -175,10 +175,10 @@ async function openInBrowser(workspace: Workspace): Promise<void> {
     void vscode.window.showWarningMessage("This item has no content ID yet. Deploy it first.");
     return;
   }
-  const url = serverUrl(project.uri);
+  const url = await serverUrl(project.uri);
   if (url === undefined) {
     void vscode.window.showWarningMessage(
-      "Set `ricochet.server` to the server URL to open items in a browser.",
+      "No server URL is known. Set `ricochet.server`, or set a default server.",
     );
     return;
   }
@@ -190,10 +190,10 @@ async function openInBrowser(workspace: Workspace): Promise<void> {
 
 async function openDeployment(workspace: Workspace, item: DeploymentItem): Promise<void> {
   const project = workspace.activeProject;
-  const url = project === undefined ? undefined : serverUrl(project.uri);
+  const url = project === undefined ? undefined : await serverUrl(project.uri);
   if (url === undefined) {
     void vscode.window.showWarningMessage(
-      "Set `ricochet.server` to the server URL to open deployments in a browser.",
+      "No server URL is known. Set `ricochet.server`, or set a default server.",
     );
     return;
   }
@@ -396,11 +396,6 @@ async function pickServer(
     { title: "Select a server" },
   );
   return chosen?.server;
-}
-
-function serverUrl(scope: vscode.Uri): string | undefined {
-  const configured = vscode.workspace.getConfiguration("ricochet", scope).get<string>("server", "");
-  return configured.startsWith("http") ? configured : undefined;
 }
 
 function defaultProfileName(url: string): string {

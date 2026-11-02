@@ -149,6 +149,42 @@ packages = "renv.lock"
     expect(found.some((m) => m.includes("`.venv/**` has no effect"))).toBe(true);
   });
 
+  it("rejects a value of the wrong type", () => {
+    const found = messages(
+      `${VALID_APP}\n[serve]\nmin_instances = 0\nmax_instances = "five"\nspawn_threshold = 80\nmax_connections = 10\n`,
+    );
+    expect(found).toEqual(["`serve.max_instances` must be a whole number, 0 or more."]);
+  });
+
+  it("rejects a number where a string is expected", () => {
+    const found = messages(`${VALID_APP}\n[resources]\ncpu_request = 2\n`);
+    expect(found).toEqual(["`resources.cpu_request` must be a string."]);
+  });
+
+  it("rejects a list holding something other than strings", () => {
+    const found = messages(
+      VALID_APP.replace('content_type = "shiny"', 'content_type = "shiny"\ntags = ["a", 1]'),
+    );
+    expect(found).toEqual(["`content.tags` must be a list of strings."]);
+  });
+
+  it("rejects a spawn_threshold outside 1 to 100", () => {
+    const serve = (threshold: string): string =>
+      `${VALID_APP}\n[serve]\nmin_instances = 0\nmax_instances = 5\nspawn_threshold = ${threshold}\nmax_connections = 10\n`;
+    const message = "`serve.spawn_threshold` must be a whole number from 1 to 100.";
+    expect(messages(serve("0"))).toEqual([message]);
+    expect(messages(serve("150"))).toEqual([message]);
+    expect(messages(serve("80.5"))).toEqual([message]);
+    expect(messages(serve("100"))).toEqual([]);
+  });
+
+  it("rejects a zero timeout that the server requires to be positive", () => {
+    const found = messages(
+      VALID_TASK.replace('cron = "0 9 * * 1-5"', 'cron = "0 9 * * 1-5"\nmax_duration = 0'),
+    );
+    expect(found).toEqual(["`schedule.max_duration` must be a whole number, 1 or more."]);
+  });
+
   it("warns when max_instances is below min_instances", () => {
     const found = messages(
       `${VALID_APP}\n[serve]\nmin_instances = 3\nmax_instances = 1\nspawn_threshold = 80\nmax_connections = 10\n`,
