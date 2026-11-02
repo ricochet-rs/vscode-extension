@@ -43,6 +43,7 @@ Never read `content.id` as "deployed", since `ricochet init` writes one before t
 
 `src/toml/schema.ts` mirrors `ricochet_core::content::ContentItem`.
 Every rule in `src/toml/validate.ts` has a counterpart in `ContentItem::validate_config`.
+Each `FIELD_DOCS` entry's `kind`, `min` and `max` mirror the serde type of that field in `ricochet-core/src/settings.rs` or `content.rs`, since the editor otherwise accepts values the CLI refuses to parse.
 When `ricochet-core` changes a content type, an enum, or a table rule, update both the schema and its test in the same change.
 
 Two rules are deliberately looser than the server's, because the editor cannot know what the filesystem holds:
