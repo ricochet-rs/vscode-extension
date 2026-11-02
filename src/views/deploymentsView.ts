@@ -8,8 +8,8 @@
 import * as vscode from "vscode";
 import { itemKind } from "../project/config.js";
 import type { Workspace } from "../project/workspace.js";
-import type { Deployment, ItemKind } from "../cli/client.js";
-import type { RunOptions } from "../cli/exec.js";
+import type { Deployment } from "../cli/client.js";
+import { deploymentHistory } from "../project/deployments.js";
 import { RicochetClient } from "../cli/client.js";
 import { clientOptions } from "../config.js";
 import { log } from "../ui/log.js";
@@ -89,35 +89,22 @@ export class DeploymentsView implements vscode.TreeDataProvider<vscode.TreeItem>
       return [new MessageItem("Unknown content type", "warning")];
     }
     const client = RicochetClient.create(clientOptions(project.uri));
-    const options = { cwd: project.directory };
-    try {
-      const deployments = await client.deployments(kind, id, options);
-      if (deployments.length === 0) {
+    const history = await deploymentHistory(client, kind, id, { cwd: project.directory });
+    switch (history.state) {
+      case "listed":
+        return history.deployments.map((deployment) => new DeploymentItem(deployment));
+      case "none":
         return [new MessageItem("No deployments recorded", "circle-outline")];
-      }
-      return deployments.map((deployment) => new DeploymentItem(deployment));
-    } catch (error) {
-      // The server refuses an item it does not have the same way as one the key cannot read.
-      if (await isUnknownItem(client, kind, id, options)) {
+      case "not-deployed":
         return [NOT_DEPLOYED];
+      case "failed": {
+        const { error } = history;
+        log().warn(
+          `Could not list deployments: ${error instanceof Error ? error.message : String(error)}`,
+        );
+        return [new MessageItem("Could not list deployments", "warning")];
       }
-      const message = error instanceof Error ? error.message : String(error);
-      log().warn(`Could not list deployments: ${message}`);
-      return [new MessageItem("Could not list deployments", "warning")];
     }
-  }
-}
-
-async function isUnknownItem(
-  client: RicochetClient,
-  kind: ItemKind,
-  id: string,
-  options: RunOptions,
-): Promise<boolean> {
-  try {
-    return !(await client.itemIds(kind, options)).has(id);
-  } catch {
-    return false;
   }
 }
 

@@ -56,5 +56,5 @@ steps:
       - install
     commands:
       - bun run build
-      # Proves the manifest and .vscodeignore still produce a valid VSIX.
+      # Proves the manifest and its `files` allowlist still produce a valid VSIX.
       - bun run package

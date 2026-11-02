@@ -29,6 +29,12 @@
     "workspaceContains:**/_ricochet.toml"
   ],
   "main": "./dist/extension.js",
+  "files": [
+    "dist/extension.js",
+    "media/**",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
   "contributes": {
     "viewsContainers": {
       "activitybar": [
