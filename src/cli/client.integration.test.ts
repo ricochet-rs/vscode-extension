@@ -199,6 +199,13 @@ describe("RicochetClient", () => {
     ]);
   });
 
+  it("reads the IDs of the listed items and skips entries without one", async () => {
+    stub(JSON.stringify([{ id: "01JAPP", name: "a" }, { name: "no id" }, { id: "01JOTHER" }]));
+    const ids = await RicochetClient.create({ binaryPath: binary }).itemIds("task");
+    expect([...ids]).toEqual(["01JAPP", "01JOTHER"]);
+    expect(argv()).toEqual(["-F", "json", "task", "list"]);
+  });
+
   it("surfaces the CLI's own error line rather than the status lines before it", async () => {
     stub(
       "",

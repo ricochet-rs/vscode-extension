@@ -1,12 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  credentialsUrl,
-  deploymentUrl,
-  isDeployed,
-  itemKind,
-  itemUrl,
-  readConfig,
-} from "./config.js";
+import { credentialsUrl, deploymentUrl, itemKind, itemUrl, readConfig } from "./config.js";
 
 const TASK = `
 [content]
@@ -50,8 +43,12 @@ describe("readConfig", () => {
     });
   });
 
-  it("leaves the id undefined before the first deploy", () => {
+  it("leaves the id undefined when the config has none", () => {
     expect(readConfig(APP).id).toBeUndefined();
+  });
+
+  it("treats an empty content ID as missing", () => {
+    expect(readConfig(TASK.replace('id = "01JTASK"', 'id = ""')).id).toBeUndefined();
   });
 });
 
@@ -66,13 +63,6 @@ describe("itemKind", () => {
 
   it("returns undefined for a content type it does not know", () => {
     expect(itemKind(readConfig(APP.replace("shiny", "nonsense")))).toBeUndefined();
-  });
-});
-
-describe("isDeployed", () => {
-  it("is true only once an id is present", () => {
-    expect(isDeployed(readConfig(TASK))).toBe(true);
-    expect(isDeployed(readConfig(APP))).toBe(false);
   });
 });
 

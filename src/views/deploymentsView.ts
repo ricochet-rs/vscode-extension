@@ -6,9 +6,10 @@
  */
 
 import * as vscode from "vscode";
-import { isDeployed, itemKind } from "../project/config.js";
+import { itemKind } from "../project/config.js";
 import type { Workspace } from "../project/workspace.js";
-import type { Deployment } from "../cli/client.js";
+import type { Deployment, ItemKind } from "../cli/client.js";
+import type { RunOptions } from "../cli/exec.js";
 import { RicochetClient } from "../cli/client.js";
 import { clientOptions } from "../config.js";
 import { log } from "../ui/log.js";
@@ -31,11 +32,18 @@ export class DeploymentItem extends vscode.TreeItem {
 }
 
 class MessageItem extends vscode.TreeItem {
-  constructor(message: string, icon: string) {
+  constructor(message: string, icon: string, tooltip?: string) {
     super(message, vscode.TreeItemCollapsibleState.None);
     this.iconPath = new vscode.ThemeIcon(icon);
+    this.tooltip = tooltip;
   }
 }
+
+const NOT_DEPLOYED = new MessageItem(
+  "Not deployed yet",
+  "circle-outline",
+  "The server has no item with this content ID that your key can see. Deploying creates it.",
+);
 
 export class DeploymentsView implements vscode.TreeDataProvider<vscode.TreeItem> {
   private readonly changed = new vscode.EventEmitter<void>();
@@ -72,27 +80,44 @@ export class DeploymentsView implements vscode.TreeDataProvider<vscode.TreeItem>
     if (project === undefined) {
       return [];
     }
-    if (!isDeployed(project.config)) {
-      return [new MessageItem("Not deployed yet", "circle-outline")];
+    const id = project.config.id;
+    if (id === undefined) {
+      return [NOT_DEPLOYED];
     }
     const kind = itemKind(project.config);
-    if (kind === undefined || project.config.id === undefined) {
+    if (kind === undefined) {
       return [new MessageItem("Unknown content type", "warning")];
     }
+    const client = RicochetClient.create(clientOptions(project.uri));
+    const options = { cwd: project.directory };
     try {
-      const client = RicochetClient.create(clientOptions(project.uri));
-      const deployments = await client.deployments(kind, project.config.id, {
-        cwd: project.directory,
-      });
+      const deployments = await client.deployments(kind, id, options);
       if (deployments.length === 0) {
         return [new MessageItem("No deployments recorded", "circle-outline")];
       }
       return deployments.map((deployment) => new DeploymentItem(deployment));
     } catch (error) {
+      // The server refuses an item it does not have the same way as one the key cannot read.
+      if (await isUnknownItem(client, kind, id, options)) {
+        return [NOT_DEPLOYED];
+      }
       const message = error instanceof Error ? error.message : String(error);
       log().warn(`Could not list deployments: ${message}`);
       return [new MessageItem("Could not list deployments", "warning")];
     }
+  }
+}
+
+async function isUnknownItem(
+  client: RicochetClient,
+  kind: ItemKind,
+  id: string,
+  options: RunOptions,
+): Promise<boolean> {
+  try {
+    return !(await client.itemIds(kind, options)).has(id);
+  } catch {
+    return false;
   }
 }
 

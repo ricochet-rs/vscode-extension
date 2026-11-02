@@ -14,7 +14,7 @@ import { formatLogRecord } from "../cli/logRecords.js";
 import { CliNotFoundError } from "../cli/binary.js";
 import { clientOptions } from "../config.js";
 import { deploy } from "./deploy.js";
-import { credentialsUrl, deploymentUrl, isDeployed, itemKind, itemUrl } from "../project/config.js";
+import { credentialsUrl, deploymentUrl, itemKind, itemUrl } from "../project/config.js";
 import { CONFIG_FILENAME, type Workspace } from "../project/workspace.js";
 import type { BundleView } from "../views/bundleView.js";
 import type { DeploymentItem, DeploymentsView } from "../views/deploymentsView.js";
@@ -171,8 +171,8 @@ async function showTaskOutput(client: RicochetClient, name: string, runId: strin
 
 async function openInBrowser(workspace: Workspace): Promise<void> {
   const project = workspace.activeProject;
-  if (project === undefined || !isDeployed(project.config)) {
-    void vscode.window.showWarningMessage("This item has not been deployed yet.");
+  if (project === undefined || project.config.id === undefined) {
+    void vscode.window.showWarningMessage("This item has no content ID yet. Deploy it first.");
     return;
   }
   const url = serverUrl(project.uri);

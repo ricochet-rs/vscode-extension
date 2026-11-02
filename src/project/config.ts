@@ -1,7 +1,7 @@
 /**
  * What the extension needs to know about a `_ricochet.toml`, derived from its contents.
  *
- * Pure, so the interesting decisions (is this a task, has it ever been deployed) are
+ * Pure, so the interesting decisions (is this a task, where it lives in the web UI) are
  * testable without an extension host.
  */
 
@@ -16,7 +16,7 @@ export interface ProjectConfig {
   readonly accessType: string | undefined;
   readonly language: string | undefined;
   readonly packages: string | undefined;
-  /** Present once the item has been deployed at least once. */
+  /** The content ID, which `ricochet init` writes before the item exists on any server. */
   readonly id: string | undefined;
   readonly schedule: string | undefined;
 }
@@ -30,7 +30,7 @@ export function readConfig(text: string): ProjectConfig {
     accessType: doc.string("content.access_type"),
     language: doc.string("language.name"),
     packages: doc.string("language.packages"),
-    id: doc.string("content.id"),
+    id: doc.string("content.id") || undefined,
     schedule: doc.string("schedule.cron"),
   };
 }
@@ -42,10 +42,6 @@ export function itemKind(config: ProjectConfig): ItemKind | undefined {
     return undefined;
   }
   return spec.task ? "task" : "app";
-}
-
-export function isDeployed(config: ProjectConfig): boolean {
-  return config.id !== undefined && config.id.length > 0;
 }
 
 /** The web UI path for a deployed item, which differs between apps and tasks. */
