@@ -19,5 +19,5 @@
     "sourceMap": true,
     "noEmit": true
   },
-  "include": ["src/**/*.ts", "esbuild.mjs", "vitest.config.mts"]
+  "include": ["src/**/*.ts", "test/**/*.ts", "esbuild.mjs", "vitest.config.mts"]
 }

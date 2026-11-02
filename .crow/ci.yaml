@@ -41,6 +41,15 @@ steps:
     commands:
       - bun run test
 
+  test-host:
+    image: reg.ricochet.rs/docker.io/oven/bun:1.4
+    depends_on:
+      - install
+    commands:
+      - apt-get update -qq
+      - apt-get install -y -qq --no-install-recommends xvfb xauth ca-certificates libasound2t64 libgbm1 libgtk-3-0t64 libnss3 libsecret-1-0 libxkbfile1 libxss1 > /dev/null
+      - xvfb-run -a bun run test:host
+
   package:
     image: reg.ricochet.rs/docker.io/oven/bun:1.4
     depends_on:
