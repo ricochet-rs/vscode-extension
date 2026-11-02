@@ -14,6 +14,7 @@ import {
   type DeployProgressEvent,
 } from "./deployEvents.js";
 import { LineSplitter } from "./lines.js";
+import { parseLogRecord, type LogRecord } from "./logRecords.js";
 
 export interface Server {
   readonly name: string;
@@ -54,6 +55,10 @@ export interface Deployed {
 
 export interface DeployOptions extends RunOptions {
   readonly onProgress?: (event: DeployProgressEvent) => void;
+}
+
+export interface LogOptions extends RunOptions {
+  readonly onRecord?: (record: LogRecord) => void;
 }
 
 export interface ClientOptions {
@@ -177,6 +182,29 @@ export class RicochetClient {
       throw new CliError(`\`ricochet ${args.join(" ")}\` exited with ${result.code}.`, result);
     }
     return { id: outcome.id, deploymentId: outcome.deploymentId };
+  }
+
+  /**
+   * Reads a server-side log, such as a task run's output under its run ID, until the server closes it.
+   * A finished log replays in full and then ends.
+   */
+  async log(id: string, options: LogOptions = {}): Promise<void> {
+    const splitter = new LineSplitter();
+    const read = (line: string): void => {
+      const record = parseLogRecord(line);
+      if (record !== undefined) {
+        options.onRecord?.(record);
+      }
+    };
+    // `--` keeps an ID the server sent from being read as a flag.
+    await this.run(this.args(["log", "--", id]), {
+      ...options,
+      onStdout: (chunk) => {
+        splitter.push(chunk).forEach(read);
+        options.onStdout?.(chunk);
+      },
+    });
+    splitter.flush().forEach(read);
   }
 
   /** Lists every file a deploy of `directory` would consider, without contacting a server. */

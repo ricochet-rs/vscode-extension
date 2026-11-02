@@ -16,10 +16,10 @@ import { ProjectView } from "./views/projectView.js";
 import { ServersView } from "./views/serversView.js";
 import { StatusBar } from "./ui/statusBar.js";
 import { Workspace } from "./project/workspace.js";
-import { createLog, log } from "./ui/log.js";
+import { createLog, createTaskOutput, log } from "./ui/log.js";
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
-  context.subscriptions.push(createLog());
+  context.subscriptions.push(createLog(), createTaskOutput());
 
   const workspace = new Workspace();
   context.subscriptions.push(workspace);

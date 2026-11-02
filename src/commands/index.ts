@@ -10,6 +10,7 @@ import { join } from "node:path";
 import { RicochetClient } from "../cli/client.js";
 import { CancelledError, CliError } from "../cli/exec.js";
 import { describeTaskRun } from "../cli/taskRun.js";
+import { formatLogRecord } from "../cli/logRecords.js";
 import { CliNotFoundError } from "../cli/binary.js";
 import { clientOptions } from "../config.js";
 import { deploy } from "./deploy.js";
@@ -18,7 +19,7 @@ import { CONFIG_FILENAME, type Workspace } from "../project/workspace.js";
 import type { BundleView } from "../views/bundleView.js";
 import type { DeploymentItem, DeploymentsView } from "../views/deploymentsView.js";
 import type { ServerItem, ServersView } from "../views/serversView.js";
-import { log } from "../ui/log.js";
+import { log, taskOutput } from "../ui/log.js";
 import { TEMPLATE } from "../project/template.js";
 
 export interface Views {
@@ -116,12 +117,55 @@ async function invokeTask(workspace: Workspace): Promise<void> {
       : outcome.level === "warning"
         ? vscode.window.showWarningMessage
         : vscode.window.showInformationMessage;
-  const action = await show(outcome.message, ...openable);
+  const action = await show(outcome.message, "Show Output", ...openable);
+  if (action === "Show Output") {
+    await showTaskOutput(client, name, run.id);
+  }
   if (action === "Open in Browser" && url !== undefined) {
     const target = itemUrl(url, project.config);
     if (target !== undefined) {
       await vscode.env.openExternal(vscode.Uri.parse(target));
     }
+  }
+}
+
+/** Replays a finished run's output, which the server keeps under the run's ID, into its own channel. */
+async function showTaskOutput(client: RicochetClient, name: string, runId: string): Promise<void> {
+  const output = taskOutput();
+  output.clear();
+  output.appendLine(`${name}, run ${runId}`);
+  output.show(true);
+  let lines = 0;
+  const finished = await vscode.window.withProgress(
+    {
+      location: vscode.ProgressLocation.Notification,
+      title: `Loading the output of ${name}`,
+      cancellable: true,
+    },
+    async (_progress, token) => {
+      const controller = new AbortController();
+      token.onCancellationRequested(() => controller.abort());
+      try {
+        await client.log(runId, {
+          signal: controller.signal,
+          onRecord: (record) => {
+            output.appendLine(formatLogRecord(record));
+            lines += 1;
+          },
+        });
+        return true;
+      } catch (error) {
+        if (error instanceof CancelledError) {
+          return false;
+        }
+        throw error;
+      }
+    },
+  );
+  if (!finished) {
+    output.appendLine("Stopped loading the output.");
+  } else if (lines === 0) {
+    output.appendLine("The run wrote no output.");
   }
 }
 
