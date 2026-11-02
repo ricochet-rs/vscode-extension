@@ -249,7 +249,7 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "package": "bun run build && bunx @vscode/vsce package --no-dependencies"
+    "package": "bun run build && vsce package --no-dependencies"
   },
   "dependencies": {
     "toml-eslint-parser": "^1.0.0"
@@ -259,9 +259,10 @@
     "@types/vscode": "^1.90.0",
     "@typescript-eslint/eslint-plugin": "^8.18.0",
     "@typescript-eslint/parser": "^8.18.0",
-    "@vscode/vsce": "^4.0.0",
+    "@vscode/vsce": "^4.1.0",
     "esbuild": "^0.28.0",
     "eslint": "^10.0.0",
+    "ovsx": "^1.3.0",
     "prettier": "^3.4.0",
     "typescript": "^6.0.0",
     "vite": "^8.0.0",

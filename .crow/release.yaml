@@ -1,6 +1,6 @@
-# Publishing is manual for now: Open VSX is the marketplace Positron reads, and it
-# needs a namespace token that is not yet provisioned. Until then this pipeline only
-# builds and attaches the VSIX to the tag.
+# Push a `v<version>` tag on main to release.
+# The tag's version is written into package.json and the CHANGELOG's Unreleased heading,
+# committed to main as ricochet-bot, and the tag is moved onto that commit before anything is published.
 when:
   - event: tag
     ref: refs/tags/v*
@@ -9,9 +9,109 @@ labels:
   agent: thumper
 
 steps:
+  bump:
+    image: reg.ricochet.rs/docker.io/library/alpine:3.24
+    commands:
+      - apk add --no-cache -q git sed
+      - |
+        set -euxo pipefail
+        VERSION="${CI_COMMIT_TAG#v}"
+        # Both stores accept only major.minor.patch.
+        echo "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || { echo "Tag $CI_COMMIT_TAG is not v<major>.<minor>.<patch>" >&2; exit 1; }
+
+        sed -i "0,/\"version\": \"[^\"]*\"/s//\"version\": \"$VERSION\"/" package.json
+        sed -i "s/^## Unreleased$/## $VERSION/" CHANGELOG.md
+        grep -q "^## $VERSION$" CHANGELOG.md || { echo "CHANGELOG.md has no Unreleased or $VERSION section" >&2; exit 1; }
+        awk -v heading="## $VERSION" '$0 == heading { found = 1; next } found && /^## / { exit } found' CHANGELOG.md > release-notes.md
+        cat release-notes.md
+
+        git config user.name "ricochet-bot"
+        git config user.email "droid@ricochet.rs"
+        git add package.json CHANGELOG.md
+        if git diff --cached --quiet; then
+          echo "==> Files already at $VERSION; no bump commit needed"
+        else
+          git commit -m "chore(release): $VERSION"
+          git tag -d "$CI_COMMIT_TAG"
+          git tag "$CI_COMMIT_TAG" HEAD
+        fi
+
   package:
     image: reg.ricochet.rs/docker.io/oven/bun:1.4
+    depends_on:
+      - bump
     commands:
       - bun install --frozen-lockfile
-      - bun run build
       - bun run package
+
+  "Push bump and tag":
+    image: reg.ricochet.rs/docker.io/library/alpine:3.24
+    depends_on:
+      - package
+    environment:
+      SSH_KEY:
+        from_secret: ricochet-bot-ssh-key
+    commands:
+      - apk add --no-cache -q git openssh-client
+      - |
+        set -euxo pipefail
+        mkdir -p ~/.ssh
+        echo "$SSH_KEY" > ~/.ssh/id_ed25519
+        chmod 600 ~/.ssh/id_ed25519
+        ssh-keyscan -t ed25519 github.com >> ~/.ssh/known_hosts 2>/dev/null
+
+        git config user.name "ricochet-bot"
+        git config user.email "droid@ricochet.rs"
+        git remote add origin-push git@github.com:ricochet-rs/vscode-extension.git
+        git fetch origin-push main
+
+        if [ "$(git rev-parse HEAD)" = "$(git rev-parse origin-push/main)" ] || ! git log -1 --format=%s | grep -q '^chore(release): '; then
+          echo "==> No bump commit to push"
+          exit 0
+        fi
+
+        # Main may have moved since the tag was pushed.
+        git rebase origin-push/main
+        git push origin-push HEAD:main
+        git tag -d "$CI_COMMIT_TAG"
+        git tag "$CI_COMMIT_TAG" HEAD
+        git push origin-push --force "$CI_COMMIT_TAG"
+
+  "Create release":
+    image: reg.ricochet.rs/docker.io/woodpeckerci/plugin-release:0.3.3
+    depends_on:
+      - "Push bump and tag"
+    settings:
+      title: ${CI_COMMIT_TAG}
+      note: release-notes.md
+      overwrite: true
+      api_key:
+        from_secret: ricochet_issue_token
+      files:
+        - "*.vsix"
+
+  "Publish to Open VSX":
+    image: reg.ricochet.rs/docker.io/oven/bun:1.4
+    depends_on:
+      - "Push bump and tag"
+    environment:
+      OVSX_PAT:
+        from_secret:
+          integration: 1
+          path: open-vsx/tokens/ricochet-rs
+          key: token
+    commands:
+      - bunx ovsx publish ricochet-${CI_COMMIT_TAG#v}.vsix --skip-duplicate
+
+  "Publish to VS Code Marketplace":
+    image: reg.ricochet.rs/docker.io/oven/bun:1.4
+    depends_on:
+      - "Push bump and tag"
+    environment:
+      VSCE_PAT:
+        from_secret:
+          integration: 1
+          path: vscode-marketplace/tokens/ricochet-rs
+          key: token
+    commands:
+      - bunx vsce publish --packagePath ricochet-${CI_COMMIT_TAG#v}.vsix --skip-duplicate

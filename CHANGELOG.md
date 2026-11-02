@@ -2,26 +2,30 @@
 
 ## Unreleased
 
-- Require the `ricochet` CLI 1.4.0 or newer, and say so with an upgrade hint when an older one is installed.
-- **Create \_ricochet.toml** lists the entrypoints found in the folder and asks for a name and access type, instead of writing a fixed Shiny template.
-- Deploying shows the number of bundled files and the upload percentage.
-- A deploy that fails because the server rejects your key offers **Sign In**.
-- The Servers view shows which servers have a stored key.
-- Signing in offers a button that opens the server page where you create an API key.
-- The Deployments view shows when each deployment happened, and marks failed, timed-out and dependency-mismatch deployments as failures.
-- Cancelling an operation before the CLI starts no longer leaves the command running.
+The first release of Ricochet for VS Code and Positron.
+It needs the `ricochet` CLI 1.4.0 or newer, and offers an upgrade hint when an older one is installed.
+
+### Configuration
+
+- Problems in `_ricochet.toml` show up as editor diagnostics, checked against the rules the server applies.
+- Completion offers every key and value the `_ricochet.toml` schema allows.
+- **Create \_ricochet.toml** lists the entrypoints found in the folder, asks for a name and access type, and writes the file.
+
+### Deploying
+
+- **Deploy** runs from the sidebar, the editor title bar or the command palette, and shows the bundled file count and upload percentage.
 - The **Bundle** view lists the files a deploy would send and groups the files left out by the reason.
-- **Run Task Now** waits for the run to finish and reports whether it succeeded, failed or was cancelled, and how long it took. Cancelling stops waiting while the run continues on the server.
-- **Show Output** on a finished task run opens what the run printed in the **Ricochet Task Output** panel.
-- The **Deployments** view shows **Not deployed yet** for a project the server does not have, including one just created with **Create \_ricochet.toml**, and the status bar and **Project** view no longer claim an item is deployed.
+- A deploy rejected because of your key offers **Sign In**.
+- The **Deployments** view lists the item's deployments with their time and status, and opens any of them in the web UI.
+- The **Deployments** view shows **Not deployed yet** until the server has the item.
 
-## 0.1.0
+### Tasks
 
-Initial release.
+- **Run Task Now** waits for the run and reports whether it succeeded, failed or was cancelled, and how long it took.
+- Cancelling **Run Task Now** stops waiting, and the run carries on on the server.
+- **Show Output** on a finished run opens what it printed in the **Ricochet Task Output** panel.
 
-- Validate `_ricochet.toml` against the rules `ricochet-core` applies, and report problems as editor diagnostics.
-- Complete keys and enum values for every table in the `_ricochet.toml` schema.
-- Deploy the active project from the sidebar, the editor title bar or the command palette, with cancellable progress.
-- List the active item's deployment history and open any entry in the web UI.
-- List, add and sign in to server profiles from the CLI's own configuration.
-- Invoke a deployed task from the editor.
+### Servers
+
+- The **Servers** view lists the server profiles the CLI knows, adds new ones, and shows which have a stored key.
+- Signing in offers a button that opens the server page where you create an API key.

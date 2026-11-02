@@ -60,6 +60,9 @@ Two rules are deliberately looser than the server's, because the editor cannot k
 
 Positron reads Posit Public Package Manager, which mirrors Open VSX, and Microsoft blocks Marketplace access from non-VS Code builds.
 So the extension has to reach Open VSX to be installable in Positron at all, and the VS Code Marketplace to be installable in VS Code.
-Publishing is manual until an Open VSX namespace and token exist.
+Release by pushing a `v<major>.<minor>.<patch>` tag on main, never by editing the version by hand.
+`.crow/release.yaml` writes the tag's version into `package.json`, renames the CHANGELOG's `## Unreleased` heading to it, pushes that commit to main as ricochet-bot, and moves the tag before publishing.
+So add changelog entries under `## Unreleased`, and recreate that heading first when the last release renamed it, or the next tag fails for want of a section.
+The store tokens are read from OpenBao at `open-vsx/tokens/ricochet-rs` and `vscode-marketplace/tokens/ricochet-rs`, each with a `token` key.
 
 Anything from the `positron` API namespace must be a soft dependency, loaded defensively, so the extension still activates in stock VS Code.
