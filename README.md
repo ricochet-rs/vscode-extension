@@ -13,7 +13,8 @@ Key and value completion covers every table in the schema.
 
 **Deploy from the sidebar.**
 The Project view shows what the active `_ricochet.toml` describes and whether it has ever been deployed.
-Deploying reports progress in a notification, streams the CLI's output to the Ricochet log, and offers to open the result.
+Deploying shows how many files were bundled and how much of the upload is sent, writes the CLI's output to the Ricochet log, and offers to open the result.
+When a deploy fails because your key is missing or expired, the error offers **Sign In**.
 
 **See what a deploy would send.**
 The Bundle view lists every file a deploy would upload with its size, and groups the files left out by the reason, such as a `content.exclude` pattern or a `.venv` directory, which is never sent.
@@ -27,7 +28,7 @@ The Servers view lists the profiles from the CLI's own configuration, shows whic
 
 ## Requirements
 
-The `ricochet` CLI, version 1.3.0 or newer, must be installed and on your `PATH`.
+The `ricochet` CLI, version 1.4.0 or newer, must be installed and on your `PATH`.
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/ricochet-rs/cli/main/install.sh | sh
@@ -67,7 +68,6 @@ All commands are under the **Ricochet** category.
 
 These follow from gaps in the CLI, tracked in [ricochet-rs/cli#212](https://github.com/ricochet-rs/cli/issues/212).
 
-- Deploy progress is the CLI's own status lines rather than structured events, because the CLI does not report deploy progress as events yet.
 - Signing in is by pasting an API key. The CLI's browser flow binds a `localhost` callback, which is the wrong machine in a remote window.
 
 ## Development

@@ -7,6 +7,13 @@
 
 import { ensureSupported, locate } from "./binary.js";
 import { CliError, run, runOrThrow, type RunOptions, type RunResult } from "./exec.js";
+import {
+  DeployError,
+  parseDeployEvent,
+  type DeployEvent,
+  type DeployProgressEvent,
+} from "./deployEvents.js";
+import { LineSplitter } from "./lines.js";
 
 export interface Server {
   readonly name: string;
@@ -38,6 +45,15 @@ export interface BundleFile {
   readonly reason: string | undefined;
   /** Where a file from outside the deployed directory, such as a workspace `uv.lock`, is read from. */
   readonly source: string | undefined;
+}
+
+export interface Deployed {
+  readonly id: string | undefined;
+  readonly deploymentId: string | undefined;
+}
+
+export interface DeployOptions extends RunOptions {
+  readonly onProgress?: (event: DeployProgressEvent) => void;
 }
 
 export interface ClientOptions {
@@ -124,11 +140,43 @@ export class RicochetClient {
   }
 
   /**
-   * Deploys the directory holding `_ricochet.toml`.
-   * The CLI's status lines arrive through `onStderr`, the only progress it reports.
+   * Deploys the directory holding `_ricochet.toml`, reporting `bundling` and `uploading` through `onProgress`.
+   * A deploy the CLI reports as failed throws `DeployError`, carrying the failure's `kind`.
    */
-  async deploy(directory: string, options: RunOptions = {}): Promise<void> {
-    await this.run(this.args(["deploy", directory]), { ...options, cwd: directory });
+  async deploy(directory: string, options: DeployOptions = {}): Promise<Deployed> {
+    const args = this.args(["deploy", directory]);
+    await ensureSupported(this.binary);
+    const splitter = new LineSplitter();
+    let outcome: Extract<DeployEvent, { event: "done" | "error" }> | undefined;
+    const read = (line: string): void => {
+      const event = parseDeployEvent(line);
+      if (event === undefined) {
+        return;
+      }
+      if (event.event === "done" || event.event === "error") {
+        outcome = event;
+      } else {
+        options.onProgress?.(event);
+      }
+    };
+
+    const result = await run(this.binary, args, {
+      ...options,
+      cwd: directory,
+      onStdout: (chunk) => {
+        splitter.push(chunk).forEach(read);
+        options.onStdout?.(chunk);
+      },
+    });
+    splitter.flush().forEach(read);
+
+    if (outcome?.event === "error") {
+      throw new DeployError(outcome, result);
+    }
+    if (result.code !== 0 || outcome === undefined) {
+      throw new CliError(`\`ricochet ${args.join(" ")}\` exited with ${result.code}.`, result);
+    }
+    return { id: outcome.id, deploymentId: outcome.deploymentId };
   }
 
   /** Lists every file a deploy of `directory` would consider, without contacting a server. */
