@@ -13,7 +13,7 @@ import { describeTaskRun } from "../cli/taskRun.js";
 import { CliNotFoundError } from "../cli/binary.js";
 import { clientOptions } from "../config.js";
 import { deploy } from "./deploy.js";
-import { deploymentUrl, isDeployed, itemKind, itemUrl } from "../project/config.js";
+import { credentialsUrl, deploymentUrl, isDeployed, itemKind, itemUrl } from "../project/config.js";
 import { CONFIG_FILENAME, type Workspace } from "../project/workspace.js";
 import type { BundleView } from "../views/bundleView.js";
 import type { DeploymentItem, DeploymentsView } from "../views/deploymentsView.js";
@@ -219,7 +219,8 @@ async function addServer(views: Views): Promise<void> {
  * Sign in by pasting a key.
  *
  * The CLI's browser flow binds a `localhost` callback, which is the wrong machine in a
- * remote window, so the extension offers the paste path it can always complete.
+ * remote window, so the extension offers the paste path it can always complete, with a
+ * button that opens the page where the key is created.
  */
 async function login(views: Views, item?: ServerItem): Promise<void> {
   const client = RicochetClient.create(clientOptions());
@@ -227,19 +228,57 @@ async function login(views: Views, item?: ServerItem): Promise<void> {
   if (target === undefined) {
     return;
   }
-  const key = await vscode.window.showInputBox({
-    title: `Sign in to ${target.name}`,
-    prompt: `Paste an API key from ${target.url}`,
-    password: true,
-    placeHolder: "rico_...",
-    validateInput: (value) => (value.trim().length > 0 ? undefined : "A key is required"),
-  });
+  const key = await promptForKey(target);
   if (key === undefined) {
     return;
   }
-  await client.loginWithKey(target.name, key.trim());
+  await client.loginWithKey(target.name, key);
   views.servers.refresh();
   void vscode.window.showInformationMessage(`Signed in to \`${target.name}\`.`);
+}
+
+/** Asks for an API key, resolving undefined when the box is dismissed. */
+async function promptForKey(target: { name: string; url: string }): Promise<string | undefined> {
+  const page = credentialsUrl(target.url);
+  const openPage: vscode.QuickInputButton = {
+    iconPath: new vscode.ThemeIcon("link-external"),
+    tooltip: "Open the page that creates an API key",
+  };
+  const input = vscode.window.createInputBox();
+  input.title = `Sign in to ${target.name}`;
+  input.prompt =
+    page === undefined
+      ? `Paste an API key from ${target.url}`
+      : `Paste an API key from ${page}. The button above opens that page.`;
+  input.password = true;
+  input.placeholder = "rico_...";
+  input.ignoreFocusOut = true;
+  input.buttons = page === undefined ? [] : [openPage];
+
+  return new Promise<string | undefined>((resolve) => {
+    let key: string | undefined;
+    input.onDidTriggerButton(() => {
+      if (page !== undefined) {
+        void vscode.env.openExternal(vscode.Uri.parse(page));
+      }
+    });
+    input.onDidChangeValue((value) => {
+      input.validationMessage = value.trim().length > 0 ? undefined : "A key is required";
+    });
+    input.onDidAccept(() => {
+      if (input.value.trim().length === 0) {
+        input.validationMessage = "A key is required";
+        return;
+      }
+      key = input.value.trim();
+      input.hide();
+    });
+    input.onDidHide(() => {
+      input.dispose();
+      resolve(key);
+    });
+    input.show();
+  });
 }
 
 async function setDefaultServer(views: Views, item: ServerItem): Promise<void> {

@@ -25,6 +25,7 @@ The Deployments view lists the item's deployment history with status, and opens 
 
 **Manage servers.**
 The Servers view lists the profiles from the CLI's own configuration, shows which ones hold a key, and can add a server, sign in, or change the default.
+Signing in asks for an API key, and a button in the prompt opens the server page that creates one, so it works the same in a remote window.
 
 ## Requirements
 
@@ -63,12 +64,6 @@ All commands are under the **Ricochet** category.
 | `Ricochet: Add Server`                    | Add a server profile.                             |
 | `Ricochet: Sign In to Server`             | Store an API key for a server.                    |
 | `Ricochet: Show Log`                      | Open the Ricochet log channel.                    |
-
-## Known limitations
-
-These follow from gaps in the CLI, tracked in [ricochet-rs/cli#212](https://github.com/ricochet-rs/cli/issues/212).
-
-- Signing in is by pasting an API key. The CLI's browser flow binds a `localhost` callback, which is the wrong machine in a remote window.
 
 ## Development
 

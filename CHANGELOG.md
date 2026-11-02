@@ -6,6 +6,7 @@
 - Deploying shows the number of bundled files and the upload percentage.
 - A deploy that fails because the server rejects your key offers **Sign In**.
 - The Servers view shows which servers have a stored key.
+- Signing in offers a button that opens the server page where you create an API key.
 - The Deployments view shows when each deployment happened, and marks failed, timed-out and dependency-mismatch deployments as failures.
 - Cancelling an operation before the CLI starts no longer leaves the command running.
 - The **Bundle** view lists the files a deploy would send and groups the files left out by the reason.

@@ -62,6 +62,15 @@ export function deploymentUrl(serverUrl: string, deploymentId: string): string {
   return `${serverUrl.replace(/\/+$/, "")}/deployments/${deploymentId}`;
 }
 
+/** The server page that creates an API key, at the root of the server's origin as `ricochet login --no-browser` prints it. */
+export function credentialsUrl(serverUrl: string): string | undefined {
+  try {
+    return new URL("/credentials", serverUrl).toString();
+  } catch {
+    return undefined;
+  }
+}
+
 /** The lockfile that must sit beside the config, used for a pre-deploy check. */
 export function requiredLockfile(config: ProjectConfig): string | undefined {
   return config.packages;
