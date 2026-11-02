@@ -15,7 +15,7 @@ import { CliNotFoundError } from "../cli/binary.js";
 import { clientOptions, serverUrl } from "../config.js";
 import { deploy } from "./deploy.js";
 import { credentialsUrl, deploymentUrl, itemKind, itemUrl } from "../project/config.js";
-import { CONFIG_FILENAME, type Workspace } from "../project/workspace.js";
+import { CONFIG_FILENAME, displayPath, type Workspace } from "../project/workspace.js";
 import type { BundleView } from "../views/bundleView.js";
 import type { DeploymentItem, DeploymentsView } from "../views/deploymentsView.js";
 import type { ServerItem, ServersView } from "../views/serversView.js";
@@ -203,7 +203,7 @@ async function openDeployment(workspace: Workspace, item: DeploymentItem): Promi
 async function selectProject(workspace: Workspace): Promise<void> {
   const picks = workspace.all.map((project) => ({
     label: project.label,
-    description: vscode.workspace.asRelativePath(project.directory),
+    description: displayPath(project.directory),
     project,
   }));
   const chosen = await vscode.window.showQuickPick(picks, { title: "Select the active project" });
