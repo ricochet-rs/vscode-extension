@@ -2,6 +2,13 @@
 # The tag's version is written into package.json and the CHANGELOG's Unreleased heading,
 # committed to main as ricochet-bot, and the tag is moved onto that commit before anything is published.
 # A tag on a commit that is not on main, or pushed after main moved on, fails before publishing.
+# The GitHub release notes come from git-sv, while CHANGELOG.md is the hand-written page the stores show.
+clone:
+  git:
+    image: codefloe.com/crow-plugins/clone:1.2.2
+    settings:
+      tags: true
+
 when:
   - event: tag
     ref: refs/tags/v*
@@ -23,8 +30,6 @@ steps:
         sed -i "0,/\"version\": \"[^\"]*\"/s//\"version\": \"$VERSION\"/" package.json
         sed -i "s/^## Unreleased$/## $VERSION/" CHANGELOG.md
         grep -q "^## $VERSION$" CHANGELOG.md || { echo "CHANGELOG.md has no Unreleased or $VERSION section" >&2; exit 1; }
-        awk -v heading="## $VERSION" '$0 == heading { found = 1; next } found && /^## / { exit } found' CHANGELOG.md > release-notes.md
-        cat release-notes.md
 
         git config user.name "ricochet-bot"
         git config user.email "droid@ricochet.rs"
@@ -36,6 +41,18 @@ steps:
           git tag -d "$CI_COMMIT_TAG"
           git tag "$CI_COMMIT_TAG" HEAD
         fi
+
+  changelog:
+    image: reg.ricochet.rs/docker.io/thegeeklab/git-sv:3.0.6
+    depends_on:
+      - bump
+    commands:
+      - apk add --no-cache -q sed
+      - git sv current-version
+      - git sv release-notes -t ${CI_COMMIT_TAG} -o release-notes.md
+      # Drop the version heading, which the release title already carries.
+      - sed -i '1,2d' release-notes.md
+      - cat release-notes.md
 
   package:
     image: reg.ricochet.rs/docker.io/oven/bun:1.4
@@ -84,6 +101,7 @@ steps:
   "Create release":
     image: reg.ricochet.rs/docker.io/woodpeckerci/plugin-release:0.3.3
     depends_on:
+      - changelog
       - "Push bump and tag"
     settings:
       title: ${CI_COMMIT_TAG}
