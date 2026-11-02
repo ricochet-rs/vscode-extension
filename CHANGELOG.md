@@ -17,6 +17,7 @@ It needs the `ricochet` CLI 1.4.0 or newer, and offers an upgrade hint when an o
 - The **Bundle** view lists the files a deploy would send and groups the files left out by the reason.
 - A deploy rejected because of your key offers **Sign In**.
 - The **Deployments** view lists the item's deployments with their time and status, and opens any of them in the web UI.
+- The **Deployments** view checks a pending deployment again every few seconds until it settles.
 - The **Deployments** view shows **Not deployed yet** until the server has the item.
 - **Open in Browser** finds the server URL from `ricochet.server`, whether it holds a URL or a profile name, or from the CLI's default server when it is empty.
 

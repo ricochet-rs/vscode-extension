@@ -11,6 +11,7 @@ import { RicochetClient } from "../cli/client.js";
 import { CancelledError, CliError } from "../cli/exec.js";
 import { CliNotFoundError } from "../cli/binary.js";
 import { DeployError, uploadPercent } from "../cli/deployEvents.js";
+import { LineSplitter } from "../cli/lines.js";
 import { clientOptions, confirmBeforeDeploy, serverUrl } from "../config.js";
 import { itemUrl } from "../project/config.js";
 import { log } from "../ui/log.js";
@@ -30,7 +31,7 @@ export async function deploy(workspace: Workspace): Promise<void> {
   }
 
   if (confirmBeforeDeploy()) {
-    const target = vscode.workspace.asRelativePath(project.directory);
+    const target = displayPath(project.directory);
     const answer = await vscode.window.showInformationMessage(
       `Deploy ${project.config.name ?? target}?`,
       { modal: true, detail: `Everything under ${target} will be bundled and uploaded.` },
@@ -52,6 +53,7 @@ export async function deploy(workspace: Workspace): Promise<void> {
       token.onCancellationRequested(() => controller.abort());
       progress.report({ message: "bundling" });
       let uploaded = 0;
+      const stderr = new LineSplitter();
 
       try {
         const client = RicochetClient.create(clientOptions(project.uri));
@@ -67,16 +69,12 @@ export async function deploy(workspace: Workspace): Promise<void> {
             progress.report({ message: `uploading ${percent}%`, increment: percent - uploaded });
             uploaded = percent;
           },
-          onStderr: (chunk) => {
-            for (const line of chunk.split("\n").map((l) => l.trim())) {
-              if (line.length > 0) {
-                log().info(line);
-              }
-            }
-          },
+          onStderr: (chunk) => stderr.push(chunk).forEach((line) => log().info(line)),
         });
+        stderr.flush().forEach((line) => log().info(line));
         return true;
       } catch (error) {
+        stderr.flush().forEach((line) => log().info(line));
         reportFailure(error);
         return false;
       }
@@ -86,6 +84,15 @@ export async function deploy(workspace: Workspace): Promise<void> {
   if (deployed) {
     await onSuccess(workspace, project);
   }
+}
+
+/** The directory relative to its workspace folder, or the folder's name when it is the folder itself. */
+function displayPath(directory: string): string {
+  const relative = vscode.workspace.asRelativePath(directory);
+  if (relative !== directory) {
+    return relative;
+  }
+  return vscode.workspace.getWorkspaceFolder(vscode.Uri.file(directory))?.name ?? directory;
 }
 
 /** Checks the things that make a deploy fail immediately, before spending a bundle on it. */
