@@ -13,6 +13,7 @@
 - The **Bundle** view lists the files a deploy would send and groups the files left out by the reason.
 - **Run Task Now** waits for the run to finish and reports whether it succeeded, failed or was cancelled, and how long it took. Cancelling stops waiting while the run continues on the server.
 - **Show Output** on a finished task run opens what the run printed in the **Ricochet Task Output** panel.
+- The **Deployments** view shows **Not deployed yet** for a project the server does not have, including one just created with **Create \_ricochet.toml**, and the status bar and **Project** view no longer claim an item is deployed.
 
 ## 0.1.0
 

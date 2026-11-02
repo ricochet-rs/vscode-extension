@@ -117,6 +117,12 @@ export class RicochetClient {
     });
   }
 
+  /** IDs of the items of this kind the server lets the signed-in key see. */
+  async itemIds(kind: ItemKind, options: RunOptions = {}): Promise<Set<string>> {
+    const payload = await this.json([kind, "list"], options);
+    return new Set(asArray(payload).flatMap((raw) => str(raw, "id") ?? []));
+  }
+
   /** Deployment history for a content item, newest first when the CLI orders it so. */
   async deployments(kind: ItemKind, id: string, options: RunOptions = {}): Promise<Deployment[]> {
     const payload = await this.json([kind, "deployment", "list", id, "--fields", "all"], options);

@@ -37,6 +37,7 @@ Read field names from the CLI's `-F json` output, not from the table it prints f
 `MINIMUM_VERSION` in `src/cli/binary.ts` is enforced before every command, so raise it in the same change that starts relying on a newer CLI feature.
 An untagged CLI build reports the last tagged version with a hash suffix, which sorts below that version, so test against a release binary.
 Before that release exists, point `ricochet.cli.path` at a wrapper script that answers `--version` with the upcoming version and execs the untagged build for everything else, and hold the merge until the release ships.
+Never read `content.id` as "deployed", since `ricochet init` writes one before the item exists, and the server answers an unknown ID with the same 403 as an item the key cannot read, so check the item list instead.
 
 ## Keeping the schema honest
 

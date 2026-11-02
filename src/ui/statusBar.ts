@@ -1,8 +1,7 @@
 import * as vscode from "vscode";
-import { isDeployed } from "../project/config.js";
 import type { Workspace } from "../project/workspace.js";
 
-/** Shows the active project and whether it has ever been deployed. */
+/** Shows the active project and the server it deploys to. */
 export class StatusBar implements vscode.Disposable {
   private readonly item: vscode.StatusBarItem;
 
@@ -27,7 +26,6 @@ export class StatusBar implements vscode.Disposable {
       [
         `**${project.config.name ?? "Ricochet project"}**`,
         server.length > 0 ? `Target: ${server}` : "Target: the CLI's default server",
-        isDeployed(project.config) ? "Deployed" : "Never deployed",
         "",
         "Click to deploy.",
       ].join("\n\n"),

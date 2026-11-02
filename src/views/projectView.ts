@@ -6,7 +6,7 @@
  */
 
 import * as vscode from "vscode";
-import { isDeployed, itemKind } from "../project/config.js";
+import { itemKind } from "../project/config.js";
 import type { Project, Workspace } from "../project/workspace.js";
 
 class Row extends vscode.TreeItem {
@@ -82,9 +82,14 @@ function rows(project: Project, total: number): vscode.TreeItem[] {
   }
 
   items.push(
-    isDeployed(config)
-      ? new Row("Deployed", config.id ?? "", "cloud", `Content ID ${config.id ?? ""}`)
-      : new Row("Deployed", "never", "circle-outline", "This item has not been deployed yet."),
+    config.id !== undefined
+      ? new Row(
+          "Content ID",
+          config.id,
+          "cloud",
+          `Content ID ${config.id}. The Deployments view shows whether the server has it.`,
+        )
+      : new Row("Content ID", "not set", "circle-outline", "The first deploy assigns one."),
   );
 
   return items;
