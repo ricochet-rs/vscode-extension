@@ -31,6 +31,11 @@ The Deployments view lists the item's deployment history with status, opens any 
 The Servers view lists the profiles from the CLI's own configuration, shows which ones hold a key, and can add a server, sign in, or change the default.
 Signing in asks for an API key, and a button in the prompt opens the server page that creates one, so it works the same in a remote window.
 
+## Installation
+
+Search for **Ricochet** in the Extensions view.
+VS Code installs it from the Visual Studio Marketplace and Positron from Open VSX.
+
 ## Requirements
 
 The `ricochet` CLI, version 1.4.0 or newer, must be installed and on your `PATH`.
