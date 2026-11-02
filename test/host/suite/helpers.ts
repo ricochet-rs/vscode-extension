@@ -87,6 +87,10 @@ export class RecordedUi {
   modalAnswer: string | undefined;
   /** Answers for `showQuickPick`, in order; each picks the item whose label matches. */
   readonly picks: string[] = [];
+  /** The items each `showQuickPick` offered, as labels with their descriptions. */
+  readonly offered: Array<
+    Array<{ readonly label: string; readonly description: string | undefined }>
+  > = [];
   /** Answers for `showInputBox`, in order. */
   readonly inputs: string[] = [];
 
@@ -137,6 +141,13 @@ export class RecordedUi {
       "showQuickPick",
       async (items: ReadonlyArray<string | vscode.QuickPickItem>) => {
         const wanted = this.picks.shift();
+        this.offered.push(
+          (await items).map((item) =>
+            typeof item === "string"
+              ? { label: item, description: undefined }
+              : { label: item.label, description: item.description },
+          ),
+        );
         return (await items).find((item) =>
           typeof item === "string" ? item === wanted : item.label === wanted,
         );

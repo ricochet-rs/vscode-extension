@@ -7,7 +7,7 @@
 
 import * as vscode from "vscode";
 import { itemKind } from "../project/config.js";
-import type { Project, Workspace } from "../project/workspace.js";
+import { displayPath, type Project, type Workspace } from "../project/workspace.js";
 
 class Row extends vscode.TreeItem {
   constructor(label: string, value: string, icon: string, tooltip?: string) {
@@ -49,7 +49,7 @@ function rows(project: Project, total: number): vscode.TreeItem[] {
 
   const name = new Row(
     config.name ?? "Unnamed",
-    vscode.workspace.asRelativePath(project.directory),
+    displayPath(project.directory),
     "package",
     "Open _ricochet.toml",
   );

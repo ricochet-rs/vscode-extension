@@ -86,6 +86,15 @@ export class Workspace implements vscode.Disposable {
   }
 }
 
+/** The directory relative to its workspace folder, or the folder's name when it is the folder itself. */
+export function displayPath(directory: string): string {
+  const relative = vscode.workspace.asRelativePath(directory);
+  if (relative !== directory) {
+    return relative;
+  }
+  return vscode.workspace.getWorkspaceFolder(vscode.Uri.file(directory))?.name ?? directory;
+}
+
 async function load(uri: vscode.Uri): Promise<Project | undefined> {
   try {
     const bytes = await vscode.workspace.fs.readFile(uri);
@@ -94,7 +103,7 @@ async function load(uri: vscode.Uri): Promise<Project | undefined> {
     return {
       uri,
       directory,
-      label: config.name ?? vscode.workspace.asRelativePath(directory),
+      label: config.name ?? displayPath(directory),
       config,
     };
   } catch (error) {
