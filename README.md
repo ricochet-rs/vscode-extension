@@ -12,7 +12,7 @@ Bundling, `_ricochet.toml` validation, environment variable encryption and crede
 Key and value completion covers every table in the schema.
 
 **Deploy from the sidebar.**
-The Project view shows what the active `_ricochet.toml` describes and whether it has ever been deployed.
+The Project view shows what the active `_ricochet.toml` describes.
 Deploying shows how many files were bundled and how much of the upload is sent, writes the CLI's output to the Ricochet log, and offers to open the result.
 When a deploy fails because your key is missing or expired, the error offers **Sign In**.
 
@@ -25,7 +25,7 @@ It reads the project on your machine, so it works before you sign in.
 **Show Output** on that notification opens the run's output in the **Ricochet Task Output** panel.
 
 **See where the item went.**
-The Deployments view lists the item's deployment history with status, and opens any entry in the web UI.
+The Deployments view lists the item's deployment history with status, opens any entry in the web UI, and shows **Not deployed yet** until the server has the item.
 
 **Manage servers.**
 The Servers view lists the profiles from the CLI's own configuration, shows which ones hold a key, and can add a server, sign in, or change the default.
