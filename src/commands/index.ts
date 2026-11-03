@@ -131,7 +131,9 @@ async function changeContentType(workspace: Workspace): Promise<void> {
       return;
     }
     text =
-      text.slice(0, entry.valueSpan.start) + JSON.stringify(value) + text.slice(entry.valueSpan.end);
+      text.slice(0, entry.valueSpan.start) +
+      JSON.stringify(value) +
+      text.slice(entry.valueSpan.end);
   }
   await vscode.workspace.fs.writeFile(project.uri, new TextEncoder().encode(text));
   await workspace.refresh();
