@@ -103,7 +103,7 @@ export class BundleView implements vscode.TreeDataProvider<vscode.TreeItem> {
             ? error.message
             : String(error);
       log().warn(`Could not list the bundle: ${message}`);
-      return [new MessageItem("Could not list the bundle", "warning", message)];
+      return [new MessageItem(message.replace(/^Error:\s*/, ""), "warning", message)];
     }
   }
 }

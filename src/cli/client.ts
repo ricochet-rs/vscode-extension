@@ -294,6 +294,16 @@ export class RicochetClient {
     await this.run(["server", "set-default", name], options);
   }
 
+  /** Removes the server profile and its stored key, without the CLI's confirmation prompt. */
+  async removeServer(name: string, options: RunOptions = {}): Promise<void> {
+    await this.run(["server", "remove", name, "--force"], options);
+  }
+
+  /** Removes the key stored for the server, keeping the profile. */
+  async logout(server: string, options: RunOptions = {}): Promise<void> {
+    await this.run(["logout", "--server", server], options);
+  }
+
   /** Runs a command under `-F json` and parses stdout, which carries the payload alone. */
   private async json(args: readonly string[], options: RunOptions): Promise<unknown> {
     const result = await this.run(this.args(args), options);

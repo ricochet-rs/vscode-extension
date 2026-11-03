@@ -23,7 +23,11 @@ type EntrypointRule =
   /** Quarto for R also accepts a `_quarto.yml`, and only that `.yml` name. */
   | { kind: "quarto"; allowed: readonly string[]; message: string }
   /** Shiny accepts a directory, so a path with no extension is not an error. */
-  | { kind: "directory-or-extensions"; allowed: readonly string[]; message: string };
+  | { kind: "directory-or-extensions"; allowed: readonly string[]; message: string }
+  /** The entrypoint must have exactly this file name, in any directory. */
+  | { kind: "filename"; name: string; message: string }
+  /** Any entrypoint except one with this file name. */
+  | { kind: "except"; name: string; message: string };
 
 export interface ContentTypeSpec {
   readonly language: Language;
@@ -91,6 +95,12 @@ export const CONTENT_TYPES: Readonly<Record<string, ContentTypeSpec>> = {
     static: true,
     entrypoint: ext(["py"], "Python content type requires a file ending in `.py`."),
   },
+  jupyter: {
+    language: "python",
+    task: true,
+    static: true,
+    entrypoint: ext(["ipynb"], "Jupyter content type requires a file ending in `.ipynb`."),
+  },
   shiny: {
     language: "r",
     task: false,
@@ -122,8 +132,12 @@ export const CONTENT_TYPES: Readonly<Record<string, ContentTypeSpec>> = {
     language: "r",
     task: false,
     static: false,
-    // Plumber is the one app type ricochet-core does not extension-check.
-    entrypoint: { kind: "any" },
+    // ricochet-core does not extension-check plumber, but plumber cannot run the `_server.yml` standard.
+    entrypoint: {
+      kind: "except",
+      name: "_server.yml",
+      message: "plumber cannot run a `_server.yml`. Use the r-server content type for plumber2.",
+    },
   },
   ambiorix: {
     language: "r",
@@ -143,13 +157,35 @@ export const CONTENT_TYPES: Readonly<Record<string, ContentTypeSpec>> = {
     static: false,
     entrypoint: ext(["r"], "Expected a file ending in `.R`."),
   },
+  "r-server": {
+    language: "r",
+    task: false,
+    static: false,
+    entrypoint: {
+      kind: "filename",
+      name: "_server.yml",
+      message: "r-server content type requires an entrypoint named `_server.yml`.",
+    },
+  },
   "julia-service": {
     language: "julia",
     task: false,
     static: false,
     entrypoint: ext(["jl"], "Julia-live content type requires a file ending in `.jl`."),
   },
+  genie: {
+    language: "julia",
+    task: false,
+    static: false,
+    entrypoint: ext(["jl"], "Julia-live content type requires a file ending in `.jl`."),
+  },
   "python-service": {
+    language: "python",
+    task: false,
+    static: false,
+    entrypoint: ext(["py"], "Python service content type requires a file ending in `.py`."),
+  },
+  "python-app": {
     language: "python",
     task: false,
     static: false,
@@ -183,11 +219,49 @@ export const CONTENT_TYPES: Readonly<Record<string, ContentTypeSpec>> = {
 
 export const CONTENT_TYPE_NAMES = Object.keys(CONTENT_TYPES).sort();
 
+/** How each content type is named to people. */
+export const CONTENT_TYPE_LABELS: Readonly<Record<string, string>> = {
+  r: "R script",
+  rmd: "R Markdown",
+  "quarto-r": "Quarto (R)",
+  shiny: "Shiny",
+  "rmd-shiny": "R Markdown with Shiny",
+  "quarto-r-shiny": "Quarto with Shiny",
+  plumber: "Plumber",
+  ambiorix: "Ambiorix",
+  "r-server": "_server.yml standard",
+  "r-service": "R service",
+  "serverless-r": "Serverless R",
+  julia: "Julia script",
+  "quarto-jl": "Quarto (Julia)",
+  "julia-service": "Julia service",
+  genie: "Genie",
+  python: "Python script",
+  "quarto-py": "Quarto (Python)",
+  jupyter: "Jupyter notebook",
+  "shiny-py": "Shiny for Python",
+  fastapi: "FastAPI",
+  flask: "Flask",
+  streamlit: "Streamlit",
+  dash: "Dash",
+  "python-service": "Python service",
+  "python-app": "Python app",
+};
+
 /** The lockfile each language requires. Python is the only one the server hard-rejects. */
 export const PACKAGE_FILE_FOR: Readonly<Record<Language, PackageFile>> = {
   r: "renv.lock",
   python: "uv.lock",
   julia: "Manifest.toml",
+};
+
+/** The command that creates each lockfile, as the CLI suggests it, and where to run it. */
+export const LOCKFILE_COMMANDS: Readonly<
+  Record<string, { readonly command: string; readonly where: string }>
+> = {
+  "renv.lock": { command: "renv::snapshot()", where: "the R console" },
+  "Manifest.toml": { command: "Pkg.instantiate()", where: "the Julia REPL" },
+  "uv.lock": { command: "uv init", where: "a terminal" },
 };
 
 /** Paths that are dropped from every bundle regardless of `include`. */

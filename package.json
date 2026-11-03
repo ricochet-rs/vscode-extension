@@ -106,6 +106,18 @@
         "icon": "$(go-to-file)"
       },
       {
+        "command": "ricochet.changeContentType",
+        "title": "Change Content Type",
+        "category": "Ricochet",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "ricochet.copyLockfileCommand",
+        "title": "Copy Command to Create Lockfile",
+        "category": "Ricochet",
+        "icon": "$(copy)"
+      },
+      {
         "command": "ricochet.createConfig",
         "title": "Create _ricochet.toml",
         "category": "Ricochet"
@@ -135,7 +147,17 @@
       },
       {
         "command": "ricochet.setDefaultServer",
-        "title": "Set as Default Server",
+        "title": "Set as Default",
+        "category": "Ricochet"
+      },
+      {
+        "command": "ricochet.logout",
+        "title": "Sign Out",
+        "category": "Ricochet"
+      },
+      {
+        "command": "ricochet.forgetServer",
+        "title": "Forget",
         "category": "Ricochet"
       },
       {
@@ -155,6 +177,14 @@
       "commandPalette": [
         {
           "command": "ricochet.setDefaultServer",
+          "when": "false"
+        },
+        {
+          "command": "ricochet.logout",
+          "when": "false"
+        },
+        {
+          "command": "ricochet.forgetServer",
           "when": "false"
         },
         {
@@ -196,12 +226,30 @@
       ],
       "view/item/context": [
         {
+          "command": "ricochet.changeContentType",
+          "when": "view == ricochet.project && viewItem == ricochet.contentType",
+          "group": "inline"
+        },
+        {
+          "command": "ricochet.copyLockfileCommand",
+          "when": "view == ricochet.project && viewItem == ricochet.missingLockfile",
+          "group": "inline"
+        },
+        {
           "command": "ricochet.login",
           "when": "view == ricochet.servers && viewItem == ricochet.server",
           "group": "inline"
         },
         {
           "command": "ricochet.setDefaultServer",
+          "when": "view == ricochet.servers && viewItem == ricochet.server"
+        },
+        {
+          "command": "ricochet.logout",
+          "when": "view == ricochet.servers && viewItem == ricochet.server"
+        },
+        {
+          "command": "ricochet.forgetServer",
           "when": "view == ricochet.servers && viewItem == ricochet.server"
         },
         {
