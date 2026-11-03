@@ -281,9 +281,17 @@ export class RicochetClient {
     );
   }
 
-  /** Signs in with a pre-existing key, the only non-interactive login path. */
+  /** Signs in with a pre-existing key, the only login path that works in a remote window. */
   async loginWithKey(server: string, key: string, options: RunOptions = {}): Promise<void> {
     await this.run(["login", "--server", server, "-k", key], options);
+  }
+
+  /**
+   * Signs in through the browser: the CLI opens the server's sign-in page and waits up to
+   * five minutes for it to call back on localhost. A key that still validates is kept as is.
+   */
+  async loginInBrowser(server: string, options: RunOptions = {}): Promise<void> {
+    await this.run(["login", "--server", server], options);
   }
 
   async addServer(name: string, url: string, options: RunOptions = {}): Promise<void> {

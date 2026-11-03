@@ -141,7 +141,7 @@
       },
       {
         "command": "ricochet.login",
-        "title": "Sign In to Server",
+        "title": "Login",
         "category": "Ricochet",
         "icon": "$(key)"
       },
@@ -242,15 +242,23 @@
         },
         {
           "command": "ricochet.setDefaultServer",
-          "when": "view == ricochet.servers && viewItem == ricochet.server"
+          "when": "view == ricochet.servers && viewItem == ricochet.server",
+          "group": "server@1"
+        },
+        {
+          "command": "ricochet.login",
+          "when": "view == ricochet.servers && viewItem == ricochet.server",
+          "group": "server@2"
         },
         {
           "command": "ricochet.logout",
-          "when": "view == ricochet.servers && viewItem == ricochet.server"
+          "when": "view == ricochet.servers && viewItem == ricochet.server",
+          "group": "server@3"
         },
         {
           "command": "ricochet.forgetServer",
-          "when": "view == ricochet.servers && viewItem == ricochet.server"
+          "when": "view == ricochet.servers && viewItem == ricochet.server",
+          "group": "server@4"
         },
         {
           "command": "ricochet.openDeployment",
