@@ -6,8 +6,10 @@
  */
 
 import * as vscode from "vscode";
-import { dirname } from "node:path";
+import { dirname, join } from "node:path";
 import { readConfig, type ProjectConfig } from "./config.js";
+import { TomlDocument } from "../toml/document.js";
+import { validate, type Problem } from "../toml/validate.js";
 import { log } from "../ui/log.js";
 
 export const CONFIG_FILENAME = "_ricochet.toml";
@@ -19,6 +21,10 @@ export interface Project {
   readonly directory: string;
   readonly label: string;
   readonly config: ProjectConfig;
+  readonly document: TomlDocument;
+  /** What validation reports for the file on disk, plus a missing lockfile, empty when `ricochet.validation.enabled` is off. */
+  readonly problems: readonly Problem[];
+  readonly missingLockfile: boolean;
 }
 
 export class Workspace implements vscode.Disposable {
@@ -97,18 +103,53 @@ export function displayPath(directory: string): string {
 
 async function load(uri: vscode.Uri): Promise<Project | undefined> {
   try {
-    const bytes = await vscode.workspace.fs.readFile(uri);
-    const config = readConfig(new TextDecoder().decode(bytes));
+    const text = new TextDecoder().decode(await vscode.workspace.fs.readFile(uri));
+    const config = readConfig(text);
+    const document = TomlDocument.parse(text);
+    const validating = vscode.workspace
+      .getConfiguration("ricochet")
+      .get<boolean>("validation.enabled", true);
     const directory = dirname(uri.fsPath);
+    const problems = validating ? validate(document) : [];
+    const packages = document.entry("language.packages");
+    const missingLockfile =
+      validating &&
+      packages !== undefined &&
+      config.packages !== undefined &&
+      !(await lockfileExists(directory, config.packages));
+    if (missingLockfile && packages !== undefined) {
+      problems.push({
+        span: packages.valueSpan,
+        message: `\`${config.packages}\` was not found next to _ricochet.toml.`,
+        severity: "error",
+      });
+    }
     return {
       uri,
       directory,
       label: config.name ?? displayPath(directory),
       config,
+      document,
+      problems,
+      missingLockfile,
     };
   } catch (error) {
     // A config mid-edit fails to parse constantly; the diagnostics surface that, not a toast.
     log().debug(`Skipping ${uri.fsPath}: ${error instanceof Error ? error.message : error}`);
     return undefined;
+  }
+}
+
+/** Whether `name` is beside the config, or for `uv.lock` in any parent, since uv workspaces keep one at the root. */
+async function lockfileExists(directory: string, name: string): Promise<boolean> {
+  for (let dir = directory; ; dir = dirname(dir)) {
+    try {
+      await vscode.workspace.fs.stat(vscode.Uri.file(join(dir, name)));
+      return true;
+    } catch {
+      if (name !== "uv.lock" || dirname(dir) === dir) {
+        return false;
+      }
+    }
   }
 }

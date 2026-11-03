@@ -49,7 +49,7 @@ When `ricochet-core` changes a content type, an enum, or a table rule, update bo
 Two rules are deliberately looser than the server's, because the editor cannot know what the filesystem holds:
 
 - A Shiny entrypoint with no extension is accepted, since it may be a directory.
-- `plumber` gets no extension check at all, matching `validate_config`.
+- `plumber` gets no extension check, matching `validate_config`, except that it refuses a `_server.yml`, which only `r-server` runs.
 
 ## Validation
 

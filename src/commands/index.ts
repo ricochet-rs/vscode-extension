@@ -20,7 +20,15 @@ import type { BundleView } from "../views/bundleView.js";
 import type { DeploymentItem, DeploymentsView } from "../views/deploymentsView.js";
 import type { ServerItem, ServersView } from "../views/serversView.js";
 import { log, taskOutput } from "../ui/log.js";
-import { ACCESS_TYPES } from "../toml/schema.js";
+import {
+  ACCESS_TYPES,
+  CONTENT_TYPES,
+  CONTENT_TYPE_LABELS,
+  CONTENT_TYPE_NAMES,
+  LOCKFILE_COMMANDS,
+  PACKAGE_FILE_FOR,
+} from "../toml/schema.js";
+import { TomlDocument } from "../toml/document.js";
 
 export interface Views {
   readonly bundle: BundleView;
@@ -52,6 +60,18 @@ export function registerCommands(
     }
   });
   register("ricochet.createConfig", () => guard(() => createConfig(workspace)));
+  register("ricochet.changeContentType", () => guard(() => changeContentType(workspace)));
+  register("ricochet.copyLockfileCommand", async () => {
+    const packages = workspace.activeProject?.config.packages;
+    const hint = packages === undefined ? undefined : LOCKFILE_COMMANDS[packages];
+    if (hint === undefined) {
+      return;
+    }
+    await vscode.env.clipboard.writeText(hint.command);
+    void vscode.window.showInformationMessage(
+      `Copied \`${hint.command}\`. Run it in ${hint.where} to create ${packages}.`,
+    );
+  });
   register("ricochet.selectProject", () => selectProject(workspace));
   register("ricochet.invokeTask", () => guard(() => invokeTask(workspace)));
   register("ricochet.openInBrowser", () => guard(() => openInBrowser(workspace)));
@@ -63,6 +83,58 @@ export function registerCommands(
   register("ricochet.setDefaultServer", (item: ServerItem) =>
     guard(() => setDefaultServer(views, item)),
   );
+  register("ricochet.forgetServer", (item: ServerItem) => guard(() => forgetServer(views, item)));
+  register("ricochet.logout", (item: ServerItem) => guard(() => logout(views, item)));
+}
+
+async function changeContentType(workspace: Workspace): Promise<void> {
+  const project = workspace.activeProject;
+  if (project === undefined) {
+    return;
+  }
+  const current = project.config.contentType;
+  const languages = [
+    ["r", "R"],
+    ["julia", "Julia"],
+    ["python", "Python"],
+  ] as const;
+  const items = languages.flatMap(([language, heading]) =>
+    [false, true].flatMap((task): Array<vscode.QuickPickItem & { type?: string }> => [
+      { label: `${heading} ${task ? "tasks" : "apps"}`, kind: vscode.QuickPickItemKind.Separator },
+      ...CONTENT_TYPE_NAMES.filter(
+        (type) => CONTENT_TYPES[type]?.language === language && CONTENT_TYPES[type]?.task === task,
+      )
+        .map((type) => ({
+          label: CONTENT_TYPE_LABELS[type] ?? type,
+          description: type === current ? `${type} · current` : type,
+          type,
+        }))
+        .sort((a, b) => a.label.localeCompare(b.label)),
+    ]),
+  );
+  const picked = await vscode.window.showQuickPick(items, { title: "Content type" });
+  if (picked?.type === undefined || picked.type === current) {
+    return;
+  }
+
+  const changes: Array<[string, string]> = [["content.content_type", picked.type]];
+  const language = CONTENT_TYPES[picked.type]?.language;
+  if (language !== undefined && language !== project.config.language) {
+    changes.push(["language.name", language], ["language.packages", PACKAGE_FILE_FOR[language]]);
+  }
+
+  let text = new TextDecoder().decode(await vscode.workspace.fs.readFile(project.uri));
+  for (const [path, value] of changes) {
+    const entry = TomlDocument.parse(text).entry(path);
+    if (entry === undefined) {
+      void vscode.window.showWarningMessage(`_ricochet.toml has no \`${path}\` to change.`);
+      return;
+    }
+    text =
+      text.slice(0, entry.valueSpan.start) + JSON.stringify(value) + text.slice(entry.valueSpan.end);
+  }
+  await vscode.workspace.fs.writeFile(project.uri, new TextEncoder().encode(text));
+  await workspace.refresh();
 }
 
 async function invokeTask(workspace: Workspace): Promise<void> {
@@ -381,6 +453,25 @@ async function promptForKey(target: { name: string; url: string }): Promise<stri
 async function setDefaultServer(views: Views, item: ServerItem): Promise<void> {
   await RicochetClient.create(clientOptions()).setDefaultServer(item.server.name);
   views.servers.refresh();
+}
+
+async function forgetServer(views: Views, item: ServerItem): Promise<void> {
+  const answer = await vscode.window.showWarningMessage(
+    `Forget ${item.server.name}?`,
+    { modal: true, detail: `This removes ${item.server.url} and its stored key from the CLI.` },
+    "Forget",
+  );
+  if (answer !== "Forget") {
+    return;
+  }
+  await RicochetClient.create(clientOptions()).removeServer(item.server.name);
+  views.servers.refresh();
+}
+
+async function logout(views: Views, item: ServerItem): Promise<void> {
+  await RicochetClient.create(clientOptions()).logout(item.server.name);
+  views.servers.refresh();
+  void vscode.window.showInformationMessage(`Signed out of ${item.server.name}.`);
 }
 
 async function pickServer(

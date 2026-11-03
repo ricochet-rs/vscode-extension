@@ -13,9 +13,9 @@ import { log } from "../ui/log.js";
 export class ServerItem extends vscode.TreeItem {
   constructor(readonly server: Server) {
     super(server.name, vscode.TreeItemCollapsibleState.None);
-    this.description = [server.url, server.isDefault ? "default" : ""].filter(Boolean).join(" · ");
+    this.description = server.isDefault ? `default · ${server.url}` : server.url;
     this.contextValue = "ricochet.server";
-    this.iconPath = new vscode.ThemeIcon(server.hasKey ? "verified-filled" : "key");
+    this.iconPath = new vscode.ThemeIcon(server.isDefault ? "star-full" : "server");
     this.tooltip = new vscode.MarkdownString(
       [
         `**${server.name}**`,

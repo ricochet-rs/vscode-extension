@@ -11,7 +11,7 @@ import { delimiter, join } from "node:path";
 import { run } from "./exec.js";
 
 /** The CLI release the extension is built and tested against. Older ones print no deploy events under `-F json`. */
-export const MINIMUM_VERSION = "1.4.0";
+export const MINIMUM_VERSION = "1.4.0-0";
 
 const EXECUTABLE = platform() === "win32" ? "ricochet.exe" : "ricochet";
 

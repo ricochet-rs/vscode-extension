@@ -66,6 +66,7 @@ export function validate(doc: TomlDocument): Problem[] {
   checkEnum(doc, problems, "content.access_type", ACCESS_TYPES);
   checkEnum(doc, problems, "language.name", LANGUAGES);
   checkEnum(doc, problems, "language.packages", PACKAGE_FILES);
+  checkId(doc, problems);
   checkName(doc, problems);
 
   if (spec !== undefined) {
@@ -80,6 +81,21 @@ export function validate(doc: TomlDocument): Problem[] {
   checkAlwaysExcluded(doc, problems);
 
   return problems;
+}
+
+/** The problems reported on the key at `path` or on its value. */
+export function problemsAt(
+  doc: TomlDocument,
+  problems: readonly Problem[],
+  path: string,
+): Problem[] {
+  const entry = doc.entry(path);
+  if (entry === undefined) {
+    return [];
+  }
+  return problems.filter(
+    (problem) => problem.span.start >= entry.span.start && problem.span.end <= entry.valueSpan.end,
+  );
 }
 
 /** Reports values serde would refuse for their type or range, before any rule reads them. */
@@ -153,6 +169,21 @@ function checkEnum(
   });
 }
 
+/** Mirrors the deploy endpoint, which parses `content.id` as a ULID. */
+function checkId(doc: TomlDocument, problems: Problem[]): void {
+  const entry = doc.entry("content.id");
+  if (entry === undefined || typeof entry.value !== "string") {
+    return;
+  }
+  if (!/^[0-7][0-9A-HJKMNP-TV-Z]{25}$/i.test(entry.value)) {
+    problems.push({
+      span: entry.valueSpan,
+      message: "The `id` in `_ricochet.toml` is not a valid ULID.",
+      severity: "error",
+    });
+  }
+}
+
 function checkName(doc: TomlDocument, problems: Problem[]): void {
   const entry = doc.entry("content.name");
   if (entry === undefined || typeof entry.value !== "string") {
@@ -197,6 +228,12 @@ function checkEntrypoint(doc: TomlDocument, problems: Problem[], spec: ContentTy
   }
   const path = entry.value;
   const base = path.split("/").pop() ?? path;
+  if (rule.kind === "filename" || rule.kind === "except") {
+    if ((base === rule.name) === (rule.kind === "except")) {
+      problems.push({ span: entry.valueSpan, message: rule.message, severity: "error" });
+    }
+    return;
+  }
   const dot = base.lastIndexOf(".");
   const extension = dot > 0 ? base.slice(dot + 1).toLowerCase() : undefined;
 
