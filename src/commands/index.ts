@@ -7,7 +7,7 @@
 
 import * as vscode from "vscode";
 import { basename, join } from "node:path";
-import { RicochetClient } from "../cli/client.js";
+import { RicochetClient, type Server } from "../cli/client.js";
 import { CancelledError, CliError } from "../cli/exec.js";
 import { describeTaskRun } from "../cli/taskRun.js";
 import { formatLogRecord } from "../cli/logRecords.js";
@@ -386,48 +386,88 @@ async function addServer(views: Views): Promise<void> {
   void vscode.window.showInformationMessage(`Added \`${name.trim()}\`. Sign in to deploy to it.`);
 }
 
+/** What the key prompt resolves with when the browser sign-in finished instead. */
+const SIGNED_IN = Symbol("signed in");
+
 /**
- * Sign in by pasting a key.
+ * Sign in through the browser, with the paste-a-key box open the whole time.
  *
- * The CLI's browser flow binds a `localhost` callback, which is the wrong machine in a
- * remote window, so the extension offers the paste path it can always complete, with a
- * button that opens the page where the key is created.
+ * The CLI cannot tell when the browser never calls back, so the box lets you paste a key at
+ * any point. In a remote window only the box is shown, since the CLI's `localhost` callback
+ * is on the wrong machine there.
  */
 async function login(views: Views, item?: ServerItem): Promise<void> {
   const client = RicochetClient.create(clientOptions());
-  const target = item?.server ?? (await pickServer(client));
+  const target = item?.server ?? (await deployTarget(client)) ?? (await pickServer(client));
   if (target === undefined) {
     return;
   }
-  const key = await promptForKey(target);
-  if (key === undefined) {
+  const controller = new AbortController();
+  const browser =
+    vscode.env.remoteName === undefined
+      ? client.loginInBrowser(target.name, { signal: controller.signal })
+      : undefined;
+  const answer = await promptForKey(target, browser);
+  controller.abort();
+  if (answer === undefined) {
     return;
   }
-  await client.loginWithKey(target.name, key);
+  if (answer !== SIGNED_IN) {
+    await client.loginWithKey(target.name, answer);
+  }
   views.servers.refresh();
   void vscode.window.showInformationMessage(`Signed in to \`${target.name}\`.`);
 }
 
-/** Asks for an API key, resolving undefined when the box is dismissed. */
-async function promptForKey(target: { name: string; url: string }): Promise<string | undefined> {
+/**
+ * Asks for an API key while `browser` runs, resolving `SIGNED_IN` when it finishes first and
+ * undefined when the box is dismissed. A failed browser sign-in leaves the box open with its error.
+ */
+async function promptForKey(
+  target: { name: string; url: string },
+  browser?: Promise<void>,
+): Promise<string | typeof SIGNED_IN | undefined> {
   const page = credentialsUrl(target.url);
   const openPage: vscode.QuickInputButton = {
     iconPath: new vscode.ThemeIcon("link-external"),
     tooltip: "Open the page that creates an API key",
   };
   const input = vscode.window.createInputBox();
-  input.title = `Sign in to ${target.name}`;
+  input.title = `Login to ${target.name}`;
   input.prompt =
-    page === undefined
-      ? `Paste an API key from ${target.url}`
-      : `Paste an API key from ${page}. The button above opens that page.`;
+    browser !== undefined
+      ? `Finish signing in in your browser, or paste an API key from ${page ?? target.url}.`
+      : page === undefined
+        ? `Paste an API key from ${target.url}`
+        : `Paste an API key from ${page}. The button above opens that page.`;
   input.password = true;
   input.placeholder = "rico_...";
   input.ignoreFocusOut = true;
   input.buttons = page === undefined ? [] : [openPage];
 
-  return new Promise<string | undefined>((resolve) => {
-    let key: string | undefined;
+  return new Promise<string | typeof SIGNED_IN | undefined>((resolve) => {
+    let answer: string | typeof SIGNED_IN | undefined;
+    let closed = false;
+    browser?.then(
+      () => {
+        if (!closed) {
+          answer = SIGNED_IN;
+          input.hide();
+        }
+      },
+      (error: unknown) => {
+        if (closed || error instanceof CancelledError) {
+          return;
+        }
+        const reason =
+          error instanceof CliError
+            ? error.summary.replace(/^Error:\s*/, "")
+            : error instanceof Error
+              ? error.message
+              : String(error);
+        input.validationMessage = `Browser sign-in failed: ${reason} Paste an API key instead.`;
+      },
+    );
     input.onDidTriggerButton(() => {
       if (page !== undefined) {
         void vscode.env.openExternal(vscode.Uri.parse(page));
@@ -441,12 +481,13 @@ async function promptForKey(target: { name: string; url: string }): Promise<stri
         input.validationMessage = "A key is required";
         return;
       }
-      key = input.value.trim();
+      answer = input.value.trim();
       input.hide();
     });
     input.onDidHide(() => {
+      closed = true;
       input.dispose();
-      resolve(key);
+      resolve(answer);
     });
     input.show();
   });
@@ -474,6 +515,16 @@ async function logout(views: Views, item: ServerItem): Promise<void> {
   await RicochetClient.create(clientOptions()).logout(item.server.name);
   views.servers.refresh();
   void vscode.window.showInformationMessage(`Signed out of ${item.server.name}.`);
+}
+
+/** The server commands go to: the `ricochet.server` profile or URL, else the CLI's default. */
+async function deployTarget(client: RicochetClient): Promise<Server | undefined> {
+  const setting = vscode.workspace.getConfiguration("ricochet").get<string>("server", "").trim();
+  const bare = (url: string): string => url.replace(/\/+$/, "");
+  const servers = await client.servers();
+  return setting.length === 0
+    ? servers.find((server) => server.isDefault)
+    : servers.find((server) => server.name === setting || bare(server.url) === bare(setting));
 }
 
 async function pickServer(
