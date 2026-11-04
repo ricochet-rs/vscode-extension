@@ -11,6 +11,11 @@
       "description": "Hold TypeScript below 7: typescript-eslint refuses to load on TS 7 until typescript-eslint/typescript-eslint#10940 lands",
       "matchPackageNames": ["typescript"],
       "allowedVersions": "<7"
+    },
+    {
+      "description": "Hold mocha below 12: it is ESM-only, and the extension host of VS Code 1.90, the oldest engines.vscode admits, cannot require it",
+      "matchPackageNames": ["mocha"],
+      "allowedVersions": "<12"
     }
   ]
 }
