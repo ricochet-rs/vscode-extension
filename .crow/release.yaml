@@ -124,4 +124,4 @@ steps:
           path: open-vsx/tokens/ricochet
           key: token
     commands:
-      - bunx ovsx publish ricochet-${CI_COMMIT_TAG#v}.vsix --skip-duplicate
+      - bunx ovsx publish ricochet-rs-${CI_COMMIT_TAG#v}.vsix --skip-duplicate
