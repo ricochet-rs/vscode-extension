@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Extension
+
+- The extension icon shows the Ricochet rabbit on a lavender tile, so it stands out in light and dark themes.
+
 ## 0.1.0
 
 The first release of Ricochet for VS Code and Positron.
