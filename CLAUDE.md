@@ -72,6 +72,7 @@ The GitHub release notes and the open "Changelog for upcoming version" issue are
 `publisher` in `package.json` is `ricochet`, not the GitHub organization name, because it must equal the Marketplace publisher ID and the Open VSX namespace, which neither store lets you rename.
 `name` is `ricochet-rs` and `displayName` is `Ricochet.rs`, because the Marketplace wants both unique across all publishers and another publisher already holds `ricochet` and `Ricochet`, and the VSIX `.crow/release.yaml` and the publish workflow upload is named after `name`.
 The Open VSX token is read from OpenBao at `open-vsx/tokens/ricochet` on the `saas` mount, which Crow's `integration: 1` reads from, with a `token` key.
+The bump push authenticates with this repository's own write deploy key, read from `github/deploy_keys/ricochet-bot-deploy-key-vscode-extension` on the `saas` mount, since GitHub refuses a deploy key registered on another repository even when ricochet-bot can write here.
 The Marketplace publish runs in `.github/workflows/publish-marketplace.yaml` through Trusted Publishing, since Azure DevOps retired the global PATs it used to take and its OIDC accepts no CI but GitHub Actions and Azure Pipelines.
 Its Marketplace policy names that workflow file and the `vscode-marketplace` GitHub environment, so renaming either breaks publishing.
 

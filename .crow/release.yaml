@@ -69,7 +69,10 @@ steps:
       - package
     environment:
       SSH_KEY:
-        from_secret: ricochet-bot-ssh-key
+        from_secret:
+          integration: 1
+          path: github/deploy_keys/ricochet-bot-deploy-key-vscode-extension
+          key: ssh_key
     commands:
       - apk add --no-cache -q git openssh-client
       - |
