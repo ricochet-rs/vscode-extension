@@ -1,6 +1,6 @@
 {
-  "name": "ricochet",
-  "displayName": "Ricochet",
+  "name": "ricochet-rs",
+  "displayName": "Ricochet.rs",
   "description": "Deploy and manage Ricochet content from VS Code and Positron.",
   "version": "0.1.0",
   "publisher": "ricochet",

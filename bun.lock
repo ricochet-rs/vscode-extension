@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "ricochet",
+      "name": "ricochet-rs",
       "dependencies": {
         "toml-eslint-parser": "^1.0.0",
       },

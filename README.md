@@ -33,7 +33,7 @@ Signing in asks for an API key, and a button in the prompt opens the server page
 
 ## Installation
 
-Search for **Ricochet** in the Extensions view.
+Search for **Ricochet.rs** in the Extensions view.
 VS Code installs it from the Visual Studio Marketplace and Positron from Open VSX.
 
 ## Requirements

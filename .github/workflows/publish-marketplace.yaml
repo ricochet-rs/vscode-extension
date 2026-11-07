@@ -1,5 +1,5 @@
 # Publishes to the VS Code Marketplace through Trusted Publishing, which accepts only GitHub Actions and Azure Pipelines, so this one step lives outside `.crow/release.yaml`.
-# `.crow/release.yaml` moves the tag onto its bump commit, so a tag push fires this twice: the first run sees the old version and skips, and the second publishes.
+# `.crow/release.yaml` moves the tag onto its bump commit, so a tag push fires this twice: the first run finds no CHANGELOG section for the version and skips, and the second publishes.
 # The Marketplace policy names this file and the `vscode-marketplace` environment, so renaming either breaks publishing.
 name: Publish to VS Code Marketplace
 
@@ -36,8 +36,9 @@ jobs:
           version="${TAG#v}"
           echo "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || { echo "Tag $TAG is not v<major>.<minor>.<patch>" >&2; exit 1; }
           manifest="$(jq -r .version package.json)"
-          if [ "$manifest" != "$version" ]; then
-            echo "package.json is at $manifest, so wait for the release pipeline to move $TAG onto its bump commit"
+          # package.json can already hold the version before the bump, so the renamed CHANGELOG heading is what marks the bump commit.
+          if [ "$manifest" != "$version" ] || ! grep -q "^## $version$" CHANGELOG.md; then
+            echo "$TAG is not on its bump commit yet, so wait for the release pipeline to move it"
             echo "publish=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -60,4 +61,4 @@ jobs:
         if: steps.check.outputs.publish == 'true'
         env:
           VERSION: ${{ steps.check.outputs.version }}
-        run: bun x vsce publish --oidc --packagePath "ricochet-$VERSION.vsix" --skip-duplicate
+        run: bun x vsce publish --oidc --packagePath "ricochet-rs-$VERSION.vsix" --skip-duplicate

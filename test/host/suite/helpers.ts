@@ -5,7 +5,7 @@ import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { STUB_ENV } from "../stub.js";
 
-export const EXTENSION_ID = "ricochet.ricochet";
+export const EXTENSION_ID = "ricochet.ricochet-rs";
 export const APP_ID = "01JTESTAPP0000000000000000";
 
 export const SERVERS = [
