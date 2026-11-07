@@ -3,6 +3,7 @@
 # committed to main as ricochet-bot, and the tag is moved onto that commit before anything is published.
 # A tag on a commit that is not on main, or pushed after main moved on, fails before publishing.
 # The GitHub release notes come from git-sv, while CHANGELOG.md is the hand-written page the stores show.
+# This publishes to Open VSX, and `.github/workflows/publish-marketplace.yaml` publishes the moved tag to the VS Code Marketplace.
 clone:
   git:
     image: codefloe.com/crow-plugins/clone:1.2.2
@@ -124,16 +125,3 @@ steps:
           key: token
     commands:
       - bunx ovsx publish ricochet-${CI_COMMIT_TAG#v}.vsix --skip-duplicate
-
-  "Publish to VS Code Marketplace":
-    image: reg.ricochet.rs/docker.io/oven/bun:1.4
-    depends_on:
-      - "Push bump and tag"
-    environment:
-      VSCE_PAT:
-        from_secret:
-          integration: 1
-          path: vscode-marketplace/tokens/ricochet-rs
-          key: token
-    commands:
-      - bunx vsce publish --packagePath ricochet-${CI_COMMIT_TAG#v}.vsix --skip-duplicate

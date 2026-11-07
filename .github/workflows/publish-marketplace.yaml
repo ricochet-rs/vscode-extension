@@ -1,0 +1,63 @@
+# Publishes to the VS Code Marketplace through Trusted Publishing, which accepts only GitHub Actions and Azure Pipelines, so this one step lives outside `.crow/release.yaml`.
+# `.crow/release.yaml` moves the tag onto its bump commit, so a tag push fires this twice: the first run sees the old version and skips, and the second publishes.
+# The Marketplace policy names this file and the `vscode-marketplace` environment, so renaming either breaks publishing.
+name: Publish to VS Code Marketplace
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-marketplace-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: vscode-marketplace
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Check the tag is a bumped release on main
+        id: check
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          version="${TAG#v}"
+          echo "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || { echo "Tag $TAG is not v<major>.<minor>.<patch>" >&2; exit 1; }
+          manifest="$(jq -r .version package.json)"
+          if [ "$manifest" != "$version" ]; then
+            echo "package.json is at $manifest, so wait for the release pipeline to move $TAG onto its bump commit"
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git merge-base --is-ancestor HEAD origin/main || { echo "$TAG is not on main" >&2; exit 1; }
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "publish=true" >> "$GITHUB_OUTPUT"
+
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        if: steps.check.outputs.publish == 'true'
+        with:
+          bun-version: "1.4.x"
+
+      - name: Package
+        if: steps.check.outputs.publish == 'true'
+        run: |
+          bun install --frozen-lockfile
+          bun run package
+
+      - name: Publish
+        if: steps.check.outputs.publish == 'true'
+        env:
+          VERSION: ${{ steps.check.outputs.version }}
+        run: bun x vsce publish --oidc --packagePath "ricochet-$VERSION.vsix" --skip-duplicate

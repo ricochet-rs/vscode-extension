@@ -3,7 +3,7 @@
   "displayName": "Ricochet",
   "description": "Deploy and manage Ricochet content from VS Code and Positron.",
   "version": "0.1.0",
-  "publisher": "ricochet-rs",
+  "publisher": "ricochet",
   "license": "MIT",
   "icon": "media/icon.png",
   "repository": {
