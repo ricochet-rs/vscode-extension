@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.0
 
 The first release of Ricochet for VS Code and Positron.
 It needs the `ricochet` CLI 1.4.0 or newer, and offers an upgrade hint when an older one is installed.
