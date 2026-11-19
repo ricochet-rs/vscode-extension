@@ -11,7 +11,7 @@ Otherwise, synchronize manually:
 1. Use `~/.cache/ricochet-rs/agent-instructions` as the shared checkout.
 2. If the checkout is absent, clone `git@github.com:ricochet-rs/agent-instructions.git` there.
 3. Fetch `origin/main` and check it out in detached-HEAD mode.
-4. Read `instructions/global.md`, then `skills/development-flow/SKILL.md`, then `skills/typescript-development/SKILL.md`.
+4. Read `instructions/global.md`, then `skills/typescript-development/SKILL.md`.
 
 ## What this repository is
 
