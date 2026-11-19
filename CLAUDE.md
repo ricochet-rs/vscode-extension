@@ -2,7 +2,11 @@
 
 ## Shared instructions
 
-Before inspecting repository files, planning, editing, or running project commands, load the latest shared `ricochet-rs` instructions.
+Synchronize the shared instructions once per session, before the first repository work.
+Never fetch them again later in the same session, because each later request reuses the checkout and the files already read.
+
+When the session context already contains "Shared ricochet-rs instructions synchronized to", the `SessionStart` hook in `.claude/settings.json` has synchronized the checkout and loaded `instructions/global.md`, so skip synchronizing and re-reading it and continue with the skill reads.
+Otherwise, synchronize manually:
 
 1. Use `~/.cache/ricochet-rs/agent-instructions` as the shared checkout.
 2. If the checkout is absent, clone `git@github.com:ricochet-rs/agent-instructions.git` there.
