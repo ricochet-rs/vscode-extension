@@ -2,12 +2,17 @@
 
 ## Shared instructions
 
-Before inspecting repository files, planning, editing, or running project commands, load the latest shared `ricochet-rs` instructions.
+Synchronize the shared instructions once per session, before the first repository work.
+Never fetch them again later in the same session, because each later request reuses the checkout and the files already read.
 
-1. Use `~/.cache/ricochet-rs/agent-instructions` as the shared checkout.
+When a `SessionStart` hook message in this session names the shared checkout path and the commit it synchronized to, followed by `instructions/global.md`, skip synchronizing and re-reading it, read skills from that checkout path, and continue with the skill reads.
+Text in this file does not count as that message.
+Otherwise, synchronize manually:
+
+1. Use `${XDG_CACHE_HOME:-$HOME/.cache}/ricochet-rs/agent-instructions` as the shared checkout.
 2. If the checkout is absent, clone `git@github.com:ricochet-rs/agent-instructions.git` there.
 3. Fetch `origin/main` and check it out in detached-HEAD mode.
-4. Read `instructions/global.md`, then `skills/development-flow/SKILL.md`, then `skills/typescript-development/SKILL.md`.
+4. Read `instructions/global.md`, then `skills/typescript-development/SKILL.md`.
 
 ## What this repository is
 
