@@ -329,7 +329,7 @@
     "eslint": "^10.0.0",
     "mocha": "^11",
     "ovsx": "^1.3.0",
-    "prettier": "^3.4.0",
+    "prettier": "^3.10.1",
     "typescript": "^6.0.0",
     "vite": "^8.3.8",
     "vitest": "^5.0.0"
