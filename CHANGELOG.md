@@ -16,6 +16,7 @@ It needs the `ricochet` CLI 1.4.0 or newer, and offers an upgrade hint when an o
 - Problems in `_ricochet.toml` show up as editor diagnostics, checked against the rules the server applies, including the type and range of each value.
 - Completion offers every key and value the `_ricochet.toml` schema allows.
 - **Create \_ricochet.toml** lists the entrypoints found in the folder, asks for a name and access type, and writes the file.
+- **Change Entrypoint** in the **Project** view lists the files the content type accepts and writes the one you choose.
 
 ### Deploying
 

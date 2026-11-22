@@ -16,6 +16,7 @@ import {
   REQUIRED_SERVE_KEYS,
   type ContentTypeSpec,
   type FieldDoc,
+  type Language,
 } from "./schema.js";
 import type { Span, TomlDocument } from "./document.js";
 
@@ -219,40 +220,53 @@ function checkLanguage(
 
 function checkEntrypoint(doc: TomlDocument, problems: Problem[], spec: ContentTypeSpec): void {
   const entry = doc.entry("content.entrypoint");
-  if (entry === undefined || typeof entry.value !== "string") {
-    return;
-  }
   const rule = spec.entrypoint;
-  if (rule.kind === "any") {
+  if (entry === undefined || typeof entry.value !== "string" || rule.kind === "any") {
     return;
   }
-  const path = entry.value;
-  const base = path.split("/").pop() ?? path;
-  if (rule.kind === "filename" || rule.kind === "except") {
-    if ((base === rule.name) === (rule.kind === "except")) {
-      problems.push({ span: entry.valueSpan, message: rule.message, severity: "error" });
-    }
-    return;
-  }
-  const dot = base.lastIndexOf(".");
-  const extension = dot > 0 ? base.slice(dot + 1).toLowerCase() : undefined;
-
-  if (extension === undefined) {
-    // Shiny entrypoints may be a directory, which the editor cannot distinguish from a typo.
-    if (rule.kind !== "directory-or-extensions") {
-      problems.push({ span: entry.valueSpan, message: rule.message, severity: "error" });
-    }
-    return;
-  }
-  if (rule.kind === "quarto" && extension === "yml") {
-    if (base !== "_quarto.yml") {
-      problems.push({ span: entry.valueSpan, message: rule.message, severity: "error" });
-    }
-    return;
-  }
-  if (!rule.allowed.includes(extension)) {
+  // Shiny entrypoints may be a directory, which the editor cannot distinguish from a typo.
+  const directory =
+    rule.kind === "directory-or-extensions" && extensionOf(entry.value) === undefined;
+  if (!directory && !fits(rule, entry.value)) {
     problems.push({ span: entry.valueSpan, message: rule.message, severity: "error" });
   }
+}
+
+const SOURCE_EXTENSION: Readonly<Record<Language, string>> = { r: "r", julia: "jl", python: "py" };
+
+/**
+ * Whether the file at `path` can be the entrypoint of `spec`. A type whose rule names no
+ * extension, such as plumber, takes its language's source files.
+ */
+export function canBeEntrypoint(spec: ContentTypeSpec, path: string): boolean {
+  const rule = spec.entrypoint;
+  const loose = rule.kind === "any" || rule.kind === "except";
+  return fits(rule, path) && (!loose || extensionOf(path) === SOURCE_EXTENSION[spec.language]);
+}
+
+function fits(rule: ContentTypeSpec["entrypoint"], path: string): boolean {
+  const base = path.split("/").pop() ?? path;
+  const extension = extensionOf(base);
+  switch (rule.kind) {
+    case "any":
+      return true;
+    case "filename":
+      return base === rule.name;
+    case "except":
+      return base !== rule.name;
+    case "quarto":
+      return (
+        base === "_quarto.yml" || (extension !== undefined && rule.allowed.includes(extension))
+      );
+    default:
+      return extension !== undefined && rule.allowed.includes(extension);
+  }
+}
+
+function extensionOf(path: string): string | undefined {
+  const base = path.split("/").pop() ?? path;
+  const dot = base.lastIndexOf(".");
+  return dot > 0 ? base.slice(dot + 1).toLowerCase() : undefined;
 }
 
 function checkTables(

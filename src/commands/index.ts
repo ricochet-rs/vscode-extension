@@ -6,7 +6,7 @@
  */
 
 import * as vscode from "vscode";
-import { basename, join } from "node:path";
+import { basename, join, relative, sep } from "node:path";
 import { RicochetClient, type Server } from "../cli/client.js";
 import { CancelledError, CliError } from "../cli/exec.js";
 import { describeTaskRun } from "../cli/taskRun.js";
@@ -15,7 +15,12 @@ import { CliNotFoundError } from "../cli/binary.js";
 import { clientOptions, serverUrl } from "../config.js";
 import { deploy } from "./deploy.js";
 import { credentialsUrl, deploymentUrl, itemKind, itemUrl } from "../project/config.js";
-import { CONFIG_FILENAME, displayPath, type Workspace } from "../project/workspace.js";
+import {
+  CONFIG_FILENAME,
+  displayPath,
+  type Project,
+  type Workspace,
+} from "../project/workspace.js";
 import type { BundleView } from "../views/bundleView.js";
 import type { DeploymentItem, DeploymentsView } from "../views/deploymentsView.js";
 import type { ServerItem, ServersView } from "../views/serversView.js";
@@ -29,6 +34,7 @@ import {
   PACKAGE_FILE_FOR,
 } from "../toml/schema.js";
 import { TomlDocument } from "../toml/document.js";
+import { canBeEntrypoint } from "../toml/validate.js";
 
 export interface Views {
   readonly bundle: BundleView;
@@ -61,6 +67,7 @@ export function registerCommands(
   });
   register("ricochet.createConfig", () => guard(() => createConfig(workspace)));
   register("ricochet.changeContentType", () => guard(() => changeContentType(workspace)));
+  register("ricochet.changeEntrypoint", () => guard(() => changeEntrypoint(workspace)));
   register("ricochet.copyLockfileCommand", async () => {
     const packages = workspace.activeProject?.config.packages;
     const hint = packages === undefined ? undefined : LOCKFILE_COMMANDS[packages];
@@ -122,7 +129,51 @@ async function changeContentType(workspace: Workspace): Promise<void> {
   if (language !== undefined && language !== project.config.language) {
     changes.push(["language.name", language], ["language.packages", PACKAGE_FILE_FOR[language]]);
   }
+  await setValues(workspace, project, changes);
+}
 
+/** Offers the project's files that the content type accepts as its entrypoint, top-level ones first. */
+async function changeEntrypoint(workspace: Workspace): Promise<void> {
+  const project = workspace.activeProject;
+  if (project === undefined) {
+    return;
+  }
+  const { contentType, entrypoint: current } = project.config;
+  const spec = contentType === undefined ? undefined : CONTENT_TYPES[contentType];
+  if (spec === undefined) {
+    void vscode.window.showWarningMessage("Set the content type before the entrypoint.");
+    return;
+  }
+  const files = await vscode.workspace.findFiles(
+    new vscode.RelativePattern(project.directory, "**/*"),
+    "**/{.*,node_modules,renv,venv,__pycache__}/**",
+  );
+  const paths = files
+    .map((uri) => relative(project.directory, uri.fsPath).split(sep).join("/"))
+    .filter((path) => canBeEntrypoint(spec, path))
+    .sort((a, b) => a.split("/").length - b.split("/").length || a.localeCompare(b));
+  if (paths.length === 0) {
+    void vscode.window.showWarningMessage(
+      `No file in ${displayPath(project.directory)} can be the entrypoint of \`${contentType}\`.`,
+    );
+    return;
+  }
+  const picked = await vscode.window.showQuickPick(
+    paths.map((path) => ({ label: path, description: path === current ? "current" : "" })),
+    { title: "Entrypoint" },
+  );
+  if (picked === undefined || picked.label === current) {
+    return;
+  }
+  await setValues(workspace, project, [["content.entrypoint", picked.label]]);
+}
+
+/** Replaces each value in `_ricochet.toml`, leaving the rest of the file as written. */
+async function setValues(
+  workspace: Workspace,
+  project: Project,
+  changes: ReadonlyArray<[string, string]>,
+): Promise<void> {
   let text = new TextDecoder().decode(await vscode.workspace.fs.readFile(project.uri));
   for (const [path, value] of changes) {
     const entry = TomlDocument.parse(text).entry(path);
