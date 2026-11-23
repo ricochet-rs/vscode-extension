@@ -8,6 +8,12 @@
       "enabled": false
     },
     {
+      "description": "Keep engines.vscode at the oldest supported VS Code: test/host/runTest.ts runs that version, which refuses to load the extension once the engine is raised, so both move together by hand",
+      "matchDepTypes": ["engines"],
+      "matchPackageNames": ["vscode"],
+      "enabled": false
+    },
+    {
       "description": "Hold TypeScript below 7: typescript-eslint refuses to load on TS 7 until typescript-eslint/typescript-eslint#10940 lands",
       "matchPackageNames": ["typescript"],
       "allowedVersions": "<7"
