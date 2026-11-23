@@ -1,95 +1,66 @@
-# Ricochet for VS Code and Positron
+<p align="center">
+  <img src="media/icon.png" width="128" height="128" alt="The ricochet rabbit">
+</p>
 
-Deploy and manage [Ricochet](https://ricochet.rs) content without leaving the editor.
+<h1 align="center">ricochet for VS Code and Positron</h1>
 
-The extension drives the `ricochet` CLI rather than reimplementing it.
-Bundling, `_ricochet.toml` validation, environment variable encryption and credential storage keep exactly one implementation, in the CLI, and the extension is the interface to it.
+<p align="center">
+  Deploy your Shiny apps, APIs, reports, and scripts to ricochet from your editor.
+</p>
 
-## Features
+<p align="center">
+  <a href="https://docs.ricochet.rs/latest/user/deployment/1a-vs-code-and-positron/">Docs</a>
+  ·
+  <a href="https://ricochet.rs">Website</a>
+  ·
+  <a href="https://marketplace.visualstudio.com/items?itemName=ricochet.ricochet-rs">VS Code Marketplace</a>
+  ·
+  <a href="https://open-vsx.org/extension/ricochet/ricochet-rs">Open VSX</a>
+</p>
 
-**Catch configuration errors while you type.**
-`_ricochet.toml` is validated against the same rules the server applies, so a content type that disagrees with its language, an entrypoint with the wrong extension, a `[schedule]` on an app or an incomplete `[serve]` table is reported in the editor instead of at deploy time.
-Key and value completion covers every table in the schema.
+---
 
-**Deploy from the sidebar.**
-The Project view shows what the active `_ricochet.toml` describes.
-Deploying shows how many files were bundled and how much of the upload is sent, writes the CLI's output to the Ricochet log, and offers to open the result.
-When a deploy fails because your key is missing or expired, the error offers **Sign In**.
+[ricochet](https://ricochet.rs) hosts R, Python, and Julia apps and scripts on your own server or on ricochet Cloud.
 
-**See what a deploy would send.**
-The Bundle view lists every file a deploy would upload with its size, and groups the files left out by the reason, such as a `content.exclude` pattern or a `.venv` directory, which is never sent.
-It reads the project on your machine, so it works before you sign in.
+![The ricochet sidebar in VS Code after a deploy, with the Project, Bundle, Deployments, and Servers views](assets/deploy.png)
 
-**Run a task and read its output.**
-**Run Task Now** waits for the run to finish and reports whether it succeeded and how long it took.
-**Show Output** on that notification opens the run's output in the **Ricochet Task Output** panel.
+## Install
 
-**See where the item went.**
-The Deployments view lists the item's deployment history with status, opens any entry in the web UI, and shows **Not deployed yet** until the server has the item.
+1. Search for **ricochet.rs** in the Extensions view and select **Install**.
 
-**Manage servers.**
-The Servers view lists the profiles from the CLI's own configuration, shows which ones hold a key, and can add a server, sign in, or change the default.
-Signing in asks for an API key, and a button in the prompt opens the server page that creates one, so it works the same in a remote window.
+2. Install the ricochet CLI, version 1.4.0 or newer.
 
-## Installation
+   ```sh
+   curl -fsSL https://raw.githubusercontent.com/ricochet-rs/cli/main/install.sh | sh
+   ```
 
-Search for **Ricochet.rs** in the Extensions view.
-VS Code installs it from the Visual Studio Marketplace and Positron from Open VSX.
+   On Windows, follow the [CLI install guide](https://docs.ricochet.rs/latest/user/deployment/1-ricochet-cli/#installation).
 
-## Requirements
+3. Select the rabbit in the activity bar, then select **Add Server** in the **Servers** view and enter your server's URL.
+   If you don't have a server, sign up at [try.ricochet.rs](https://try.ricochet.rs), a trial server that ricochet wipes every week.
 
-The `ricochet` CLI, version 1.4.0 or newer, must be installed and on your `PATH`.
+4. Select **Login** and paste an API key.
+   Use the button in the login prompt to open your server in the browser and create a key there.
 
-```sh
-curl -fsSL https://raw.githubusercontent.com/ricochet-rs/cli/main/install.sh | sh
-```
+## What you can do
 
-Run `ricochet self update` to upgrade an older CLI.
-
-Set `ricochet.cli.path` if it lives somewhere the extension does not look.
-
-## Settings
-
-| Setting                       | Default | Purpose                                                                                                |
-| ----------------------------- | ------- | ------------------------------------------------------------------------------------------------------ |
-| `ricochet.cli.path`           | `""`    | Absolute path to the `ricochet` executable. Empty means search `PATH` and the usual install locations. |
-| `ricochet.server`             | `""`    | Server profile name or URL to target. Empty means the CLI's default server.                            |
-| `ricochet.deploy.confirm`     | `true`  | Ask before deploying.                                                                                  |
-| `ricochet.validation.enabled` | `true`  | Report `_ricochet.toml` problems as diagnostics.                                                       |
-
-`ricochet.server` is resolved per resource, so a multi-root workspace can target a different server per folder.
-
-## Commands
-
-All commands are under the **Ricochet** category.
-
-| Command                                   | Description                                                       |
-| ----------------------------------------- | ----------------------------------------------------------------- |
-| `Ricochet: Deploy`                        | Deploy the active project.                                        |
-| `Ricochet: Run Task Now`                  | Run a deployed task, report how it finished, and show its output. |
-| `Ricochet: Open Deployed Item in Browser` | Open the item in the web UI.                                      |
-| `Ricochet: Create _ricochet.toml`         | Create a config for an entrypoint found in the folder.            |
-| `Ricochet: Select Active Project`         | Choose between several projects in one workspace.                 |
-| `Ricochet: Add Server`                    | Add a server profile.                                             |
-| `Ricochet: Sign In to Server`             | Store an API key for a server.                                    |
-| `Ricochet: Show Log`                      | Open the Ricochet log channel.                                    |
+- Deploy from the **Project** view and track each deployment in the **Deployments** view.
+- Create `_ricochet.toml`, your project's settings file, by choosing your app's main file from a list.
+- Catch mistakes in `_ricochet.toml` as you type, and autocomplete any setting.
+- Check which files you'll upload in the **Bundle** view before you deploy.
+- Run a deployed script or report on demand with **Run Task Now**, then read its output.
 
 ## Development
 
 ```sh
 bun install
-bun run build
 bun run test
+# On a Linux machine without a display, run this under xvfb-run -a
 bun run test:host
 ```
 
-Press <kbd>F5</kbd> in VS Code to launch an Extension Development Host.
-
-`bun run typecheck`, `bun run lint`, `bun run test` and `bun run test:host` are what CI runs.
-`bun run test` runs the modules that do not import `vscode` under plain Vitest.
-`bun run test:host` downloads VS Code into `.vscode-test`, opens a copy of `test/host/fixture` in it, and drives the commands against a stub `ricochet` executable, so it never contacts a server.
-On Linux without a display, run it under `xvfb-run -a`.
+Press <kbd>F5</kbd> in VS Code to try your changes in a new window.
 
 ## License
 
-MIT
+[MIT](LICENSE)
