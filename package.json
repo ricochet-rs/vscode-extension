@@ -112,6 +112,12 @@
         "icon": "$(edit)"
       },
       {
+        "command": "ricochet.changeEntrypoint",
+        "title": "Change Entrypoint",
+        "category": "Ricochet",
+        "icon": "$(edit)"
+      },
+      {
         "command": "ricochet.copyLockfileCommand",
         "title": "Copy Command to Create Lockfile",
         "category": "Ricochet",
@@ -228,6 +234,11 @@
         {
           "command": "ricochet.changeContentType",
           "when": "view == ricochet.project && viewItem == ricochet.contentType",
+          "group": "inline"
+        },
+        {
+          "command": "ricochet.changeEntrypoint",
+          "when": "view == ricochet.project && viewItem == ricochet.entrypoint",
           "group": "inline"
         },
         {

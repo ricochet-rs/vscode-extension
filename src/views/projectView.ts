@@ -70,13 +70,9 @@ function rows(project: Project, total: number): vscode.TreeItem[] {
   const type = new Row("Type", config.contentType ?? "not set", "symbol-enum");
   type.contextValue = "ricochet.contentType";
   items.push(flag(type, project, "content.content_type"));
-  items.push(
-    flag(
-      new Row("Entrypoint", config.entrypoint ?? "not set", "file-code"),
-      project,
-      "content.entrypoint",
-    ),
-  );
+  const entrypoint = new Row("Entrypoint", config.entrypoint ?? "not set", "file-code");
+  entrypoint.contextValue = "ricochet.entrypoint";
+  items.push(flag(entrypoint, project, "content.entrypoint"));
   const runtime = new Row(
     "Runtime",
     [config.language, config.packages].filter(Boolean).join(" · ") || "not set",

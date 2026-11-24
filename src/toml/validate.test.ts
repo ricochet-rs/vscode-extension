@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { TomlDocument } from "./document.js";
-import { validate } from "./validate.js";
+import { CONTENT_TYPES } from "./schema.js";
+import { canBeEntrypoint, validate } from "./validate.js";
 
 const VALID_TASK = `
 [content]
@@ -192,5 +193,28 @@ packages = "renv.lock"
     expect(found).toContain(
       "`max_instances` (1) is below `min_instances` (3); the server clamps it up.",
     );
+  });
+});
+
+describe("canBeEntrypoint", () => {
+  it("takes only the files a content type accepts", () => {
+    const quarto = CONTENT_TYPES["quarto-r"]!;
+    expect(canBeEntrypoint(quarto, "report.qmd")).toBe(true);
+    expect(canBeEntrypoint(quarto, "docs/_quarto.yml")).toBe(true);
+    expect(canBeEntrypoint(quarto, "other.yml")).toBe(false);
+    expect(canBeEntrypoint(quarto, "report.py")).toBe(false);
+  });
+
+  it("takes only the server file for r-server", () => {
+    const server = CONTENT_TYPES["r-server"]!;
+    expect(canBeEntrypoint(server, "_server.yml")).toBe(true);
+    expect(canBeEntrypoint(server, "app.R")).toBe(false);
+  });
+
+  it("limits plumber to R files and not _server.yml", () => {
+    const plumber = CONTENT_TYPES["plumber"]!;
+    expect(canBeEntrypoint(plumber, "api/plumber.R")).toBe(true);
+    expect(canBeEntrypoint(plumber, "README.md")).toBe(false);
+    expect(canBeEntrypoint(plumber, "_server.yml")).toBe(false);
   });
 });
